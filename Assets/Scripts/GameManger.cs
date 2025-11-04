@@ -157,7 +157,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        int group = level % backgrounds.Count;
+        int group = level % (backgrounds.Count + 1);
         if (group != bgIndex && !fading)
         {
             bgIndex = group;
@@ -187,7 +187,7 @@ public class GameManager : MonoBehaviour
                 if (inputBuffer == e.Word)
                 {
                     score += 10 + e.Word.Length * 2 + (e.IsBoss ? 50 : 0);
-                    ninja.Swing();
+                    ninja.PlayAnimation();
                     sfxSource.PlayOneShot(hitClip);
                     Destroy(e.gameObject);
                     enemies.Remove(e);
@@ -209,4 +209,5 @@ public class GameManager : MonoBehaviour
     {
         scoreText.text = "Score: " + score;
     }
+
 }
