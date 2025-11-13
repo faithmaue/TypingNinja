@@ -5,17 +5,18 @@ public class WordEnemy : MonoBehaviour
 {
     public TMP_Text wordText;
     private string word;
-    private bool isBoss;
+    private bool wordLevel;
 
     public string Word => word;
-    public bool IsBoss => isBoss;
+    public bool WordLevel => wordLevel;
 
-    public void Init(string word, bool boss)
+
+    public void Init(string word, bool wordDiff)
     {
         this.word = word;
-        this.isBoss = boss;
+        this.wordLevel = wordDiff;
         wordText.text = word;
-        wordText.color = boss ? Color.red : Color.white;
+        wordText.color = Color.white; //boss ? Color.red : Color.white;
     }
 
     public void MoveDown(float baseSpeed, float speedGrowth, int score)
