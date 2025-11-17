@@ -1,19 +1,32 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+[System.Serializable]
 
 public class UIManager : MonoBehaviour
 {
-    public TMP_Text skinText;
-    private SaveData saveData;
     public GameObject player1NameField;
     public GameObject player2NameField;
     public GameObject player1ReadyButton;
     public GameObject player2ReadyButton;
+
+    public GameObject singlePlayerButton;
+    public GameObject multiPlayerButton;
+    public GameObject skinsButton;
+    public GameObject leaderboardButton;
+    
     private string[] skins = { "Blue", "Green", "Red" };
     private int index = 0;
     private int numPlayers = 0;
     private int playersReady = 0;
+    private static SaveData save = DataManager.Data;
+    string skin = save.selectedSkin;
+    List<PlayerRecord> history = save.history;
+
      
 
     void Start()
@@ -22,35 +35,27 @@ public class UIManager : MonoBehaviour
         player2NameField.SetActive(false);
         player1ReadyButton.SetActive(false);
         player2ReadyButton.SetActive(false);
-        saveData = DataManager.Load();
         for (int i = 0; i < skins.Length; i++)
         {
-            if (skins[i] == saveData.selectedSkin)
+            if (skins[i] == save.selectedSkin)
                 index = i;
         }
-        UpdateSkinLabel();
     }
 
     public void NextSkin()
     {
         index = (index + 1) % skins.Length;
-        saveData.selectedSkin = skins[index];
+        save.selectedSkin = skins[index];
         DataManager.Save();
-        UpdateSkinLabel();
     }
 
     public void PrevSkin()
     {
         index = (index - 1 + skins.Length) % skins.Length;
-        saveData.selectedSkin = skins[index];
+        save.selectedSkin = skins[index];
         DataManager.Save();
-        UpdateSkinLabel();
     }
-
-    void UpdateSkinLabel()
-    {
-        skinText.text = "Selected Skin: " + saveData.selectedSkin;
-    }
+ 
 
     public void SinglePlayerName()
     {
@@ -72,6 +77,7 @@ public class UIManager : MonoBehaviour
     public void ReadyForGame()
     {
         playersReady++;
+
         if (playersReady == numPlayers)
         {
             Debug.Log("game started");

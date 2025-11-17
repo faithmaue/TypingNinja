@@ -183,7 +183,7 @@ public class GameManager : MonoBehaviour
         string word = megaBossWords[Random.Range(0, megaBossWords.Count)];
         Vector3 pos = new(Random.Range(-7f, 7f), 6.5f, 0);
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
-        newEnemy.Init(word, true); //, true);
+        newEnemy.Init(word, true);
         enemies.Add(newEnemy);
         sfxSource.PlayOneShot(bossClip);
     }
@@ -196,7 +196,7 @@ public class GameManager : MonoBehaviour
             prevLevel = level;
             if (level > 0 && level % skinUnlockEveryLevels == 0)
             {
-                DataManager.UnlockNextSkin();
+                OnLevelComplete(level);
             }
         }
 
@@ -207,6 +207,15 @@ public class GameManager : MonoBehaviour
             backgroundRenderer.sprite = backgrounds[bgIndex];
             sfxSource.PlayOneShot(swooshClip);
         }
+    }
+
+    public static void OnLevelComplete(int level)
+    {
+        if (level == 4)
+            DataManager.UnlockSkin("Black");
+
+        if (level == 7)
+            DataManager.UnlockSkin("Red");
     }
 
     public void OnKeyPress(string key)
