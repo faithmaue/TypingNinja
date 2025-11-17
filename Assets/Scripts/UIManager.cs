@@ -1,11 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
-using System;
 using System.Collections.Generic;
-using System.IO;
-
-[System.Serializable]
 
 public class UIManager : MonoBehaviour
 {
@@ -23,18 +19,24 @@ public class UIManager : MonoBehaviour
     private int index = 0;
     private int numPlayers = 0;
     private int playersReady = 0;
-    private static SaveData save = DataManager.Data;
-    string skin = save.selectedSkin;
-    List<PlayerRecord> history = save.history;
 
-     
+    // No static here; and don't initialize from DataManager at field level
+    private SaveData save;
+    private string skin;
+    private List<PlayerRecord> history;
 
     void Start()
     {
+        // Get the save data AFTER Unity is running
+        save = DataManager.Data;
+        skin = save.selectedSkin;
+        history = save.history;
+
         player1NameField.SetActive(false);
         player2NameField.SetActive(false);
         player1ReadyButton.SetActive(false);
         player2ReadyButton.SetActive(false);
+
         for (int i = 0; i < skins.Length; i++)
         {
             if (skins[i] == save.selectedSkin)
@@ -55,7 +57,6 @@ public class UIManager : MonoBehaviour
         save.selectedSkin = skins[index];
         DataManager.Save();
     }
- 
 
     public void SinglePlayerName()
     {
@@ -65,6 +66,7 @@ public class UIManager : MonoBehaviour
         player2NameField.SetActive(false);
         player2ReadyButton.SetActive(false);
     }
+
     public void MultiPlayerName()
     {
         numPlayers = 2;
@@ -100,3 +102,4 @@ public class UIManager : MonoBehaviour
         Application.Quit();
     }
 }
+

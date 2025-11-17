@@ -18,24 +18,33 @@ public class PlayerRecord
 [System.Serializable]
 public class SaveData
 {
-    public string selectedSkin = "Blue"; 
+    public string selectedSkin = "Blue";
     public List<string> unlocked = new List<string>() { "Blue" };
 
     public List<PlayerRecord> history = new List<PlayerRecord>();
 }
 
-
-
 public static class DataManager
 {
-    private static string path = Application.persistentDataPath + "/save.json";
+    private static string path;
     private static SaveData data;
+    private static bool initialized = false;
+
+    // Make sure path is set AFTER Unity is ready
+    private static void EnsureInitialized()
+    {
+        if (initialized) return;
+        path = Path.Combine(Application.persistentDataPath, "save.json");
+        initialized = true;
+    }
 
     // -----------------------------
     // Load Save File
     // -----------------------------
     public static SaveData Load()
     {
+        EnsureInitialized();
+
         if (data != null) return data;
 
         if (File.Exists(path))
@@ -55,17 +64,18 @@ public static class DataManager
     {
         get
         {
-            Load();     // ensures data is instantiated
+            Load(); // ensures data is instantiated
             return data;
         }
     }
-
 
     // -----------------------------
     // Save Save File
     // -----------------------------
     public static void Save()
     {
+        EnsureInitialized();
+
         if (data == null)
             data = new SaveData();
 
@@ -103,7 +113,6 @@ public static class DataManager
         Debug.Log($"Recorded stats for {playerName}: WPM={wpm}, Mistakes={mistakes}, Accuracy={accuracy}%");
     }
 
-
     public static void UnlockSkin(string skinName)
     {
         Load();
@@ -131,5 +140,4 @@ public static class DataManager
             Debug.LogWarning("Tried to select a locked skin: " + skinName);
         }
     }
-    
 }
