@@ -122,69 +122,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &38928622
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 38928624}
-  - component: {fileID: 38928625}
-  m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &38928624
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 38928622}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &38928625
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 38928622}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84618f67e0670420a83b6bdf46f7a937, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  baseFallSpeed: 60
-  spawnInterval: 1.25
-  spawnGrowth: 0.12
-  speedGrowth: 0.06
-  bossInterval: 200
-  levelPoints: 300
-  skinUnlockEveryLevels: 3
-  enemyPrefab: {fileID: 0}
-  enemyParent: {fileID: 0}
-  ninja: {fileID: 0}
-  scoreText: {fileID: 0}
-  inputBufferText: {fileID: 0}
-  playerNameText: {fileID: 0}
-  backgroundRenderer: {fileID: 0}
-  backgrounds: []
-  sfxSource: {fileID: 0}
-  swooshClip: {fileID: 0}
-  hitClip: {fileID: 0}
-  bossClip: {fileID: 0}
 --- !u!1 &100102209
 GameObject:
   m_ObjectHideFlags: 0
@@ -2826,7 +2763,6 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 519420032}
-  - {fileID: 38928624}
   - {fileID: 1929557906}
   - {fileID: 1274603904}
   - {fileID: 226019177}

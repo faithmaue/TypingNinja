@@ -57,6 +57,8 @@ public class UIManager : MonoBehaviour
         numPlayers = 1;
         player1NameField.SetActive(true);
         player1ReadyButton.SetActive(true);
+        player2NameField.SetActive(false);
+        player2ReadyButton.SetActive(false);
     }
     public void MultiPlayerName()
     {
@@ -72,13 +74,14 @@ public class UIManager : MonoBehaviour
         playersReady++;
         if (playersReady == numPlayers)
         {
+            Debug.Log("game started");
             StartGame();
         }
     }
 
     public void StartGame()
     {
-        SceneManager.LoadScene("Game");
+        SceneManager.LoadScene("LevelsScreen");
     }
 
     public void OpenLeaderboard()
