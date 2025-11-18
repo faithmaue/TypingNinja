@@ -2,18 +2,25 @@ using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 using Unity.Burst.CompilerServices;
+using UnityEngine.SceneManagement;
+
 
 public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
-    public float baseFallSpeed = 2f;
-    public float spawnInterval = 1.25f;
+    public float baseFallSpeed = 1.5f;
+    public float spawnInterval = 2.5f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
     public int miniBossInterval = 100;
     public int megaBossInterval = 200;
     public int levelPoints = 300;
     public int skinUnlockEveryLevels = 3;
+
+    [Header("UI")]
+    public GameObject gameOverPanel;
+    public GameObject levelCompletePanel;
+
 
     [Header("References")]
     public WordEnemy enemyPrefab;
@@ -22,6 +29,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text scoreText;
     public TMP_Text inputBufferText;
     public TMP_Text playerNameText;
+    public TMP_Text timerText;
+
 
     [Header("Backgrounds")]
     public SpriteRenderer backgroundRenderer;         // ⬅ CHANGED
@@ -37,6 +46,8 @@ public class GameManager : MonoBehaviour
     private float spawnTimer;
     private float elapsed;
     private int score;
+    private bool isGameOver = false;
+    private float levelTimer = 60f;
     private string inputBuffer = "";
     private List<WordEnemy> enemies = new();
     private List<string> normalWords = new();
@@ -119,12 +130,28 @@ public class GameManager : MonoBehaviour
         bgIndex = 0;
         fading = false;
         fadeProgress = 0f;
+        levelTimer = 60f;
+
 
         UpdateUI();
     }
 
     void Update()
     {
+        if (isGameOver)
+            return;
+
+        // --- Timer logic ---
+        levelTimer -= Time.deltaTime;
+        timerText.text = "Time: " + Mathf.CeilToInt(levelTimer);
+
+        if (levelTimer <= 0f)
+        {
+            HandleLevelComplete();
+            return;
+        }
+
+        // --- Spawn logic ---
         float dt = Time.deltaTime;
         spawnTimer += dt;
         elapsed += dt;
@@ -141,15 +168,18 @@ public class GameManager : MonoBehaviour
                 SpawnEnemy();
         }
 
+        // --- Movement of enemies ---
         foreach (WordEnemy e in enemies)
         {
-            if (e != null);
+            if (e != null)
                 e.MoveDown(baseFallSpeed, speedGrowth, score);
         }
 
+        // --- Background + fail check ---
         UpdateBackground();
         CheckGameOver();
     }
+
 
     void CheckGameOver()
     {
@@ -157,11 +187,12 @@ public class GameManager : MonoBehaviour
         {
             if (e != null && e.transform.position.y < -5f)
             {
-                Debug.Log("Game Over!");
-                // Add GameOver UI trigger here
+                HandleGameOver();
+                break;  // don’t check further once we know it’s over
             }
         }
     }
+
 
     void SpawnEnemy()
     {
@@ -285,4 +316,50 @@ public class GameManager : MonoBehaviour
     {
         scoreText.text = "Score: " + score;
     }
+
+    void HandleGameOver()
+    {
+        if (isGameOver) return;
+
+        isGameOver = true;
+        Debug.Log("Game Over!");
+
+        // Stop all movement/spawn logic
+        // (Update() early-return already prevents new spawns)
+        foreach (WordEnemy e in enemies)
+        {
+            if (e != null)
+                e.enabled = false;  // if needed; mostly cosmetic
+        }
+
+        // Show Game Over UI
+        gameOverPanel.SetActive(true);
+    }
+
+    public void RetryLevel()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    }
+
+    void HandleLevelComplete()
+    {
+        if (isGameOver) return;
+        isGameOver = true;
+
+        Debug.Log("Level Complete!");
+
+        // Increase difficulty for next level
+        baseFallSpeed += 0.2f;
+
+        // Show Level Complete UI
+        levelCompletePanel.SetActive(true);
+    }
+
+    public void NextLevel()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    }
+
+
+
 }

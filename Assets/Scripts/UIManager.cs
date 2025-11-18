@@ -15,7 +15,7 @@ public class UIManager : MonoBehaviour
     public GameObject skinsButton;
     public GameObject leaderboardButton;
     
-    private string[] skins = { "Blue", "Green", "Red" };
+    private string[] skins = { "Blue", "Black", "Red" };
     private int index = 0;
     private int numPlayers = 0;
     private int playersReady = 0;
