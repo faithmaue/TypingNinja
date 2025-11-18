@@ -89,7 +89,7 @@ public class UIManager : MonoBehaviour
 
     public void StartGame()
     {
-        SceneManager.LoadScene("LevelsScreen");
+        SceneManager.LoadScene("GameplayScreen");
     }
 
     public void OpenLeaderboard()

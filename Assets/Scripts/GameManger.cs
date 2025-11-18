@@ -7,7 +7,7 @@ using Unity.Burst.CompilerServices;
 public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
-    public float baseFallSpeed = 60f;
+    public float baseFallSpeed = 50f;
     public float spawnInterval = 1.25f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
@@ -25,8 +25,9 @@ public class GameManager : MonoBehaviour
     public TMP_Text playerNameText;
 
     [Header("Backgrounds")]
-    public SpriteRenderer backgroundRenderer;
-    public List<Sprite> backgrounds;
+    public MeshRenderer backgroundRenderer;
+    public List<Material> backgrounds;
+
 
     [Header("Sounds")]
     public AudioSource sfxSource;
@@ -204,7 +205,7 @@ public class GameManager : MonoBehaviour
         if (group != bgIndex && !fading)
         {
             bgIndex = group;
-            backgroundRenderer.sprite = backgrounds[bgIndex];
+            backgroundRenderer.material = backgrounds[bgIndex];
             sfxSource.PlayOneShot(swooshClip);
         }
     }
@@ -231,31 +232,40 @@ public class GameManager : MonoBehaviour
         inputBuffer += key.ToLower();
         inputBufferText.text = inputBuffer;
 
-        foreach (WordEnemy e in enemies)
+        for (int i = 0; i < enemies.Count; i++)
         {
+            WordEnemy e = enemies[i];
+            if (e == null) continue;
+
             if (e.Word.StartsWith(inputBuffer))
             {
                 e.HighlightMatch(inputBuffer.Length);
+
                 if (inputBuffer == e.Word)
                 {
-                    score += 10 + e.Word.Length * 2; //+ (e.GetBoss ? 50 : 0);
+                    score += 10 + e.Word.Length * 2;
                     ninja.PlayAnimation();
-                    sfxSource.PlayOneShot(hitClip);
+                    if (hitClip != null)
+                        sfxSource.PlayOneShot(hitClip);
+
                     Destroy(e.gameObject);
-                    enemies.Remove(e);
+                    enemies.RemoveAt(i);
+
                     inputBuffer = "";
                     inputBufferText.text = "";
                     UpdateUI();
-                    break;
                 }
+
+                // Either we found a prefix (or finished a word), stop looking at others
                 return;
             }
         }
 
-        // no matches
+        // no matches at all
         inputBuffer = "";
         inputBufferText.text = "";
     }
+
 
     void UpdateUI()
     {
