@@ -1044,7 +1044,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84618f67e0670420a83b6bdf46f7a937, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseFallSpeed: 600
+  baseFallSpeed: 50
   spawnInterval: 1.25
   spawnGrowth: 0.12
   speedGrowth: 0.06
