@@ -1456,11 +1456,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 021bf5dbbbdb041e1928c2c26e428f4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  skinText: {fileID: 0}
-  player1NameField: {fileID: 998912080}
-  player2NameField: {fileID: 1547680154}
+  player1NameField: {fileID: 998912082}
+  player2NameField: {fileID: 1547680156}
   player1ReadyButton: {fileID: 820588349}
   player2ReadyButton: {fileID: 2002040472}
+  singlePlayerButton: {fileID: 1531826265}
+  multiPlayerButton: {fileID: 609290500}
+  skinsButton: {fileID: 1288923547}
+  leaderboardButton: {fileID: 745547564}
+  player1Name: none
+  player2Name: none
 --- !u!4 &1096325760
 Transform:
   m_ObjectHideFlags: 0

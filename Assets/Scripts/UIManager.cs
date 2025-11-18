@@ -2,11 +2,13 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    public GameObject player1NameField;
-    public GameObject player2NameField;
+    public InputField player1NameField;
+    public InputField player2NameField;
     public GameObject player1ReadyButton;
     public GameObject player2ReadyButton;
 
@@ -14,6 +16,9 @@ public class UIManager : MonoBehaviour
     public GameObject multiPlayerButton;
     public GameObject skinsButton;
     public GameObject leaderboardButton;
+    public string player1Name = "none";
+    public string player2Name = "none";
+
     
     private string[] skins = { "Blue", "Black", "Red" };
     private int index = 0;
@@ -32,8 +37,6 @@ public class UIManager : MonoBehaviour
         skin = save.selectedSkin;
         history = save.history;
 
-        player1NameField.SetActive(false);
-        player2NameField.SetActive(false);
         player1ReadyButton.SetActive(false);
         player2ReadyButton.SetActive(false);
 
@@ -61,17 +64,13 @@ public class UIManager : MonoBehaviour
     public void SinglePlayerName()
     {
         numPlayers = 1;
-        player1NameField.SetActive(true);
         player1ReadyButton.SetActive(true);
-        player2NameField.SetActive(false);
         player2ReadyButton.SetActive(false);
     }
 
     public void MultiPlayerName()
     {
         numPlayers = 2;
-        player1NameField.SetActive(true);
-        player2NameField.SetActive(true);
         player1ReadyButton.SetActive(true);
         player2ReadyButton.SetActive(true);
     }
@@ -79,6 +78,15 @@ public class UIManager : MonoBehaviour
     public void ReadyForGame()
     {
         playersReady++;
+        if (player1NameField != null)
+        {
+            player1Name = player1NameField.text;
+        }
+        if (player2NameField != null)
+        {
+            player2Name = player2NameField.text;
+        }
+       // Debug.Log("Player 1 name: " + player1Name);
 
         if (playersReady == numPlayers)
         {
