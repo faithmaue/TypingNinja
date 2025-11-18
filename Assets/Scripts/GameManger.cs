@@ -2,12 +2,11 @@ using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 using Unity.Burst.CompilerServices;
-// using System;
 
 public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
-    public float baseFallSpeed = 50f;
+    public float baseFallSpeed = 2f;
     public float spawnInterval = 1.25f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
@@ -25,9 +24,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text playerNameText;
 
     [Header("Backgrounds")]
-    public MeshRenderer backgroundRenderer;
-    public List<Material> backgrounds;
-
+    public SpriteRenderer backgroundRenderer;         // ⬅ CHANGED
+    public List<Sprite> backgrounds = new();          // ⬅ CHANGED
 
     [Header("Sounds")]
     public AudioSource sfxSource;
@@ -57,48 +55,53 @@ public class GameManager : MonoBehaviour
 
     void LoadDictionaries()
     {
-        // Use TextAsset in Resources folder (dictionary.txt)
         TextAsset dict1 = Resources.Load<TextAsset>("dictionary1");
         TextAsset dict2 = Resources.Load<TextAsset>("dictionary2");
         TextAsset dict3 = Resources.Load<TextAsset>("dictionary3");
+
         if (dict1 != null)
         {
             string[] lines = dict1.text.Split('\n');
             foreach (string w in lines)
             {
                 string word = w.Trim().ToLower();
-                normalWords.Add(word);
+                if (!string.IsNullOrEmpty(word))
+                    normalWords.Add(word);
             }
         }
         else
         {
             normalWords.AddRange(new string[] { "ninja", "shadow", "katana", "dojo", "honor", "stealth" });
         }
+
         if (dict2 != null)
         {
             string[] lines = dict2.text.Split('\n');
             foreach (string w in lines)
             {
                 string word = w.Trim().ToLower();
-                miniBossWords.Add(word);
+                if (!string.IsNullOrEmpty(word))
+                    miniBossWords.Add(word);
             }
         }
         else
         {
             miniBossWords.AddRange(new string[] { "lightning", "warriors", "dragons", "phantoms" });
         }
+
         if (dict3 != null)
         {
             string[] lines = dict3.text.Split('\n');
             foreach (string w in lines)
             {
                 string word = w.Trim().ToLower();
-                megaBossWords.Add(word);
+                if (!string.IsNullOrEmpty(word))
+                    megaBossWords.Add(word);
             }
         }
         else
         {
-            megaBossWords.AddRange(new string[] { "intermittenly", "revolutionary", "unquestionable", "misunderstood", "disproportionate"});
+            megaBossWords.AddRange(new string[] { "intermittenly", "revolutionary", "unquestionable", "misunderstood", "disproportionate" });
         }
     }
 
@@ -140,7 +143,7 @@ public class GameManager : MonoBehaviour
 
         foreach (WordEnemy e in enemies)
         {
-            if (e != null)
+            if (e != null);
                 e.MoveDown(baseFallSpeed, speedGrowth, score);
         }
 
@@ -163,20 +166,28 @@ public class GameManager : MonoBehaviour
     void SpawnEnemy()
     {
         string word = normalWords[Random.Range(0, normalWords.Count)];
-        Vector3 pos = new(Random.Range(-7f, 7f), 6f, 0);
+
+        // Choose a random X within view, and a Y a bit above the top
+        float x = Random.Range(-7f, 7f);   // you can tweak these later
+        float y = 5.5f;                    // slightly above the visible area
+
+        Vector3 pos = new Vector3(x, y, 0f);
+
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
-        newEnemy.Init(word, false); //, false);
+        newEnemy.Init(word, false);
         enemies.Add(newEnemy);
     }
+
 
     void SpawnMiniBoss()
     {
         string word = miniBossWords[Random.Range(0, miniBossWords.Count)];
         Vector3 pos = new(Random.Range(-7f, 7f), 6.5f, 0);
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
-        newEnemy.Init(word, true); //, true);
+        newEnemy.Init(word, true);
         enemies.Add(newEnemy);
-        sfxSource.PlayOneShot(bossClip);
+        if (bossClip != null)
+            sfxSource.PlayOneShot(bossClip);
     }
 
     void SpawnMegaBoss()
@@ -186,11 +197,15 @@ public class GameManager : MonoBehaviour
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
         newEnemy.Init(word, true);
         enemies.Add(newEnemy);
-        sfxSource.PlayOneShot(bossClip);
+        if (bossClip != null)
+            sfxSource.PlayOneShot(bossClip);
     }
 
     void UpdateBackground()
     {
+        if (backgroundRenderer == null || backgrounds.Count == 0)
+            return;
+
         int level = score / levelPoints;
         if (level != prevLevel)
         {
@@ -201,12 +216,13 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        int group = level % (backgrounds.Count + 1);
+        int group = level % backgrounds.Count;
         if (group != bgIndex && !fading)
         {
             bgIndex = group;
-            backgroundRenderer.material = backgrounds[bgIndex];
-            sfxSource.PlayOneShot(swooshClip);
+            backgroundRenderer.sprite = backgrounds[bgIndex];    // ⬅ CHANGED
+            if (swooshClip != null)
+                sfxSource.PlayOneShot(swooshClip);
         }
     }
 
@@ -256,7 +272,6 @@ public class GameManager : MonoBehaviour
                     UpdateUI();
                 }
 
-                // Either we found a prefix (or finished a word), stop looking at others
                 return;
             }
         }
@@ -266,10 +281,8 @@ public class GameManager : MonoBehaviour
         inputBufferText.text = "";
     }
 
-
     void UpdateUI()
     {
         scoreText.text = "Score: " + score;
     }
-
 }

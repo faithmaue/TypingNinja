@@ -21,9 +21,13 @@ public class WordEnemy : MonoBehaviour
 
     public void MoveDown(float baseSpeed, float speedGrowth, int score)
     {
-        float speed = baseSpeed * Time.deltaTime * (1 + speedGrowth * score / 600f);
-        transform.Translate(Vector3.down * speed);
+        // For now: constant speed, ignore speedGrowth and score
+        float speed = baseSpeed;
+
+        // Move straight down in world space, frame-rate independent
+        transform.position += Vector3.down * speed * Time.deltaTime;
     }
+
 
     public void HighlightMatch(int prefixLength)
     {
