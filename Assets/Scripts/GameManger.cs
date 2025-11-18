@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text inputBufferText;
     public TMP_Text playerNameText;
 
+
     [Header("Backgrounds")]
     public SpriteRenderer backgroundRenderer;         // ⬅ CHANGED
     public List<Sprite> backgrounds = new();          // ⬅ CHANGED
@@ -46,9 +47,23 @@ public class GameManager : MonoBehaviour
     private int bgIndex = 0;
     private bool fading = false;
     private float fadeProgress = 0f;
+    private UIManager playerUI;
+    private string player1Name;
+    private string player2Name;
+
 
     void Start()
     {
+        playerUI = GetComponent<UIManager>();
+        if(playerUI != null)
+        {
+            player1Name = playerUI.player1Name;
+            player2Name = playerUI.player2Name;
+        }
+        Debug.Log("Player 1 name: " + player1Name);
+
+        playerNameText.text = player1Name;
+
         LoadDictionaries();
         ResetGame();
     }
