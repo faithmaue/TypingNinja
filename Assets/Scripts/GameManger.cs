@@ -204,7 +204,7 @@ public class GameManager : MonoBehaviour
         }
 
         // --- Background + fail check ---
-        //UpdateBackground();
+        UpdateBackground(); ///////////////// COMMENT OUT
         CheckGameOver();
     }
 
@@ -260,30 +260,37 @@ public class GameManager : MonoBehaviour
             sfxSource.PlayOneShot(bossClip);
     }
 
-    /*void UpdateBackground()
+    void UpdateBackground()
     {
-        if (backgroundRenderer == null || backgrounds.Count == 0)
-            return;
+        // Level starts at 1
+        int level = score / levelPoints + 1;
 
-        int level = score / levelPoints;
+        // Update ninja skin based on level
+        if (ninja != null)
+            ninja.UpdateSkin(level);
+
         if (level != prevLevel)
         {
             prevLevel = level;
-            if (level > 0 && level % skinUnlockEveryLevels == 0)
-            {
-                OnLevelComplete(level);
-            }
+            // If you still want to trigger skin unlock tracking, you can do:
+            // OnLevelComplete(level);
         }
 
-        int group = level % backgrounds.Count;
+        if (backgrounds == null || backgrounds.Count == 0 || backgroundRenderer == null)
+            return;
+
+        int group = (level - 1) % backgrounds.Count;
+
         if (group != bgIndex && !fading)
         {
             bgIndex = group;
-            backgroundRenderer.sprite = backgrounds[bgIndex];    // ⬅ CHANGED
-            if (swooshClip != null)
+            backgroundRenderer.sprite = backgrounds[bgIndex];
+
+            if (sfxSource != null && swooshClip != null)
                 sfxSource.PlayOneShot(swooshClip);
         }
-    }*/
+    }
+
 
     public static void OnLevelComplete(int level)
     {
@@ -296,17 +303,66 @@ public class GameManager : MonoBehaviour
 
     public void OnKeyPress(string key)
     {
+        // Handle backspace
         if (key == "Backspace")
         {
             if (inputBuffer.Length > 0)
                 inputBuffer = inputBuffer[..^1];
+
             inputBufferText.text = inputBuffer;
             return;
         }
 
-        inputBuffer += key.ToLower();
+        // Handle Enter (submit)
+        if (key == "Enter")
+        {
+            if (string.IsNullOrEmpty(inputBuffer))
+                return;
+
+            // Look for an exact match with the current buffer
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                WordEnemy e = enemies[i];
+                if (e == null) continue;
+
+                if (inputBuffer == e.Word)
+                {
+                    // Score
+                    score += 10 + e.Word.Length * 2;
+
+                    // Swing ninja
+                    if (ninja != null)
+                        ninja.Swing();
+
+                    // Play hit sound
+                    if (sfxSource != null && hitClip != null)
+                        sfxSource.PlayOneShot(hitClip);
+
+                    // Remove enemy
+                    Destroy(e.gameObject);
+                    enemies.RemoveAt(i);
+
+                    // Reset input
+                    inputBuffer = "";
+                    inputBufferText.text = "";
+
+                    UpdateUI();
+                    return;
+                }
+            }
+
+            // Enter was pressed but no exact match
+            inputBuffer = "";
+            inputBufferText.text = "";
+            return;
+        }
+
+        // Otherwise, assume this is a character key
+        key = key.ToLowerInvariant();
+        inputBuffer += key;
         inputBufferText.text = inputBuffer;
 
+        // See if buffer matches the start of any word
         for (int i = 0; i < enemies.Count; i++)
         {
             WordEnemy e = enemies[i];
@@ -314,31 +370,17 @@ public class GameManager : MonoBehaviour
 
             if (e.Word.StartsWith(inputBuffer))
             {
+                // Highlight matched prefix
                 e.HighlightMatch(inputBuffer.Length);
-
-                if (inputBuffer == e.Word)
-                {
-                    score += 10 + e.Word.Length * 2;
-                    ninja.PlayAnimation();
-                    if (hitClip != null)
-                        sfxSource.PlayOneShot(hitClip);
-
-                    Destroy(e.gameObject);
-                    enemies.RemoveAt(i);
-
-                    inputBuffer = "";
-                    inputBufferText.text = "";
-                    UpdateUI();
-                }
-
                 return;
             }
         }
 
-        // no matches at all
+        // No enemy word starts with this buffer → clear
         inputBuffer = "";
         inputBufferText.text = "";
     }
+
 
     void UpdateUI()
     {
