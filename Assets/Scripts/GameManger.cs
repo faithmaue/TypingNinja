@@ -313,7 +313,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // Handle Enter (submit)
+        // Handle Enter (submit the current buffer)
         if (key == "Enter")
         {
             if (string.IsNullOrEmpty(inputBuffer))
@@ -325,61 +325,60 @@ public class GameManager : MonoBehaviour
                 WordEnemy e = enemies[i];
                 if (e == null) continue;
 
-                if (inputBuffer == e.Word)
+                if (string.Equals(inputBuffer, e.Word, System.StringComparison.OrdinalIgnoreCase))
                 {
                     // Score
                     score += 10 + e.Word.Length * 2;
 
-                    // Swing ninja
+                    // Ninja attack
                     if (ninja != null)
                         ninja.Swing();
 
-                    // Play hit sound
-                    if (sfxSource != null && hitClip != null)
+                    // Hit SFX
+                    if (hitClip != null && sfxSource != null)
                         sfxSource.PlayOneShot(hitClip);
 
-                    // Remove enemy
+                    // Remove the enemy
                     Destroy(e.gameObject);
                     enemies.RemoveAt(i);
 
                     // Reset input
                     inputBuffer = "";
                     inputBufferText.text = "";
-
                     UpdateUI();
                     return;
                 }
             }
 
-            // Enter was pressed but no exact match
+            // Enter pressed but no word matched → clear input
             inputBuffer = "";
             inputBufferText.text = "";
             return;
         }
 
-        // Otherwise, assume this is a character key
+        // Normal character input
         key = key.ToLowerInvariant();
         inputBuffer += key;
         inputBufferText.text = inputBuffer;
 
-        // See if buffer matches the start of any word
+        // Highlight prefix matches only
         for (int i = 0; i < enemies.Count; i++)
         {
             WordEnemy e = enemies[i];
             if (e == null) continue;
 
-            if (e.Word.StartsWith(inputBuffer))
+            if (e.Word.StartsWith(inputBuffer, System.StringComparison.OrdinalIgnoreCase))
             {
-                // Highlight matched prefix
                 e.HighlightMatch(inputBuffer.Length);
                 return;
             }
         }
 
-        // No enemy word starts with this buffer → clear
+        // No enemy word starts with this buffer → reset
         inputBuffer = "";
         inputBufferText.text = "";
     }
+
 
 
     void UpdateUI()
