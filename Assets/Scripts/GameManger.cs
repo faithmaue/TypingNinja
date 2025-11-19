@@ -12,8 +12,8 @@ public class GameManager : MonoBehaviour
     public float spawnInterval = 2.5f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
-    public int miniBossInterval = 100;
-    public int megaBossInterval = 200;
+    public int miniBossInterval = 50;
+    public int megaBossInterval = 100;
     public int levelPoints = 300;
     public int skinUnlockEveryLevels = 3;
 
@@ -65,13 +65,26 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        playerUI = GetComponent<UIManager>();
+        // Load previous level and ball speed values if they exist
+        if (PlayerPrefs.HasKey("levelNum"))
+            levelNum = PlayerPrefs.GetInt("levelNum");
+
+        if (PlayerPrefs.HasKey("baseFallSpeed"))
+            baseFallSpeed = PlayerPrefs.GetFloat("baseFallSpeed");
+
+        if (PlayerPrefs.HasKey("bgIndex"))
+            bgIndex = PlayerPrefs.GetInt("bgIndex");
+
+        // Apply background
+        if (backgrounds.Count > 0 && backgroundRenderer != null)
+            backgroundRenderer.sprite = backgrounds[bgIndex];
+
+        playerUI = FindObjectOfType<UIManager>();
         if(playerUI != null)
         {
             player1Name = playerUI.player1Name;
             player2Name = playerUI.player2Name;
         }
-        Debug.Log("Player 1 name: " + player1Name);
 
         playerNameText.text = player1Name;
 
@@ -191,7 +204,7 @@ public class GameManager : MonoBehaviour
         }
 
         // --- Background + fail check ---
-        UpdateBackground();
+        //UpdateBackground();
         CheckGameOver();
     }
 
@@ -247,7 +260,7 @@ public class GameManager : MonoBehaviour
             sfxSource.PlayOneShot(bossClip);
     }
 
-    void UpdateBackground()
+    /*void UpdateBackground()
     {
         if (backgroundRenderer == null || backgrounds.Count == 0)
             return;
@@ -270,7 +283,7 @@ public class GameManager : MonoBehaviour
             if (swooshClip != null)
                 sfxSource.PlayOneShot(swooshClip);
         }
-    }
+    }*/
 
     public static void OnLevelComplete(int level)
     {
@@ -364,7 +377,8 @@ public class GameManager : MonoBehaviour
         Debug.Log("Level Complete!");
 
         // Increase difficulty for next level
-        baseFallSpeed += 0.2f;
+        //baseFallSpeed += 0.2f;
+        //levelNum++;
 
         // Show Level Complete UI
         levelCompletePanel.SetActive(true);
@@ -372,9 +386,27 @@ public class GameManager : MonoBehaviour
 
     public void NextLevel()
     {
+        levelNum++;             // Increase the level
+        baseFallSpeed += 0.2f;  // Increase difficulty
+
+        // Store these values so they persist after the scene reload
+        PlayerPrefs.SetInt("levelNum", levelNum);
+        PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
+
+        // Change background index
+        PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
+
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
     }
 
+    public void BackToMenu()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
+    }
 
+    public void Quit()
+    {
+        Application.Quit();
+    }
 
 }

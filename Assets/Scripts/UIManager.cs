@@ -37,6 +37,9 @@ public class UIManager : MonoBehaviour
         skin = save.selectedSkin;
         history = save.history;
 
+        player1NameField.gameObject.SetActive(false);
+        player2NameField.gameObject.SetActive(false);
+
         player1ReadyButton.SetActive(false);
         player2ReadyButton.SetActive(false);
 
@@ -64,6 +67,10 @@ public class UIManager : MonoBehaviour
     public void SinglePlayerName()
     {
         numPlayers = 1;
+
+        player1NameField.gameObject.SetActive(true);
+        player2NameField.gameObject.SetActive(false);
+
         player1ReadyButton.SetActive(true);
         player2ReadyButton.SetActive(false);
     }
@@ -71,6 +78,10 @@ public class UIManager : MonoBehaviour
     public void MultiPlayerName()
     {
         numPlayers = 2;
+
+        player1NameField.gameObject.SetActive(true);
+        player2NameField.gameObject.SetActive(true);
+
         player1ReadyButton.SetActive(true);
         player2ReadyButton.SetActive(true);
     }
@@ -104,6 +115,12 @@ public class UIManager : MonoBehaviour
     {
         SceneManager.LoadScene("Leaderboard");
     }
+
+    void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
+
 
     public void Quit()
     {
