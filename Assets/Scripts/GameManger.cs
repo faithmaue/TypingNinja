@@ -5,6 +5,7 @@ using Unity.Burst.CompilerServices;
 using UnityEngine.SceneManagement;
 
 
+
 public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
@@ -62,7 +63,13 @@ public class GameManager : MonoBehaviour
     private string player1Name;
     private string player2Name;
 
-
+    private int streak = 0;
+    private const int streakGoal = 3;
+    private const int streakBonus = 50;
+    private const int mistypePenalty = -10;
+    
+    [Header("UI Popups")]
+    public TMP_Text streakPopup;
     void Start()
     {
         // Load previous level and ball speed values if they exist
@@ -379,7 +386,12 @@ public class GameManager : MonoBehaviour
         inputBufferText.text = "";
     }
 
-
+    void ShowStreakPopup()
+{
+   streakPopup.text = "STREAK BONUS!";
+   streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
+   streakPopup.gameObject.SetActive(true);
+}
 
     void UpdateUI()
     {
@@ -409,6 +421,7 @@ public class GameManager : MonoBehaviour
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
     }
+
 
     void HandleLevelComplete()
     {
