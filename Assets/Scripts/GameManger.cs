@@ -364,17 +364,31 @@ public class GameManager : MonoBehaviour
                     // Score
                     score += 10 + e.Word.Length * 2;
 
-                    // Ninja attack
-                    if (ninja != null)
-                        ninja.Swing();
+                    Vector3 hitPos = e.transform.position;
 
-                    // Hit SFX
-                    if (hitClip != null && sfxSource != null)
-                        sfxSource.PlayOneShot(hitClip);
+                    ninja.SlashAt(hitPos, () =>
+                    {
+                        // Play SFX
+                        if (hitClip != null && sfxSource != null)
+                            sfxSource.PlayOneShot(hitClip);
 
-                    // Remove the enemy
-                    Destroy(e.gameObject);
-                    enemies.RemoveAt(i);
+                        // Remove enemy
+                        if (e != null)
+                        {
+                            Destroy(e.gameObject);
+                            enemies.RemoveAt(i);
+                        }
+
+                        // Score (same as before)
+                        score += 10 + e.Word.Length * 2;
+
+                        // Reset input
+                        inputBuffer = "";
+                        inputBufferText.text = "";
+
+                        UpdateUI();
+                    });
+
 
                     // Reset input
                     inputBuffer = "";

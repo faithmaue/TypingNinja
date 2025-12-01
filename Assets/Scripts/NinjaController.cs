@@ -15,6 +15,10 @@ public class NinjaController : MonoBehaviour
 
     private bool isSwinging = false;
     private string currentSkin = "";
+    public float dashDuration = 0.15f; 
+    public float slashImpactDelay = 0.1f;
+    private Coroutine attackRoutine;
+
 
     void Start()
     {
@@ -123,5 +127,49 @@ public class NinjaController : MonoBehaviour
 
         isSwinging = false;
     }
+
+    public void SlashAt(Vector3 targetPos, System.Action onHit)
+    {
+        if (attackRoutine != null)
+            StopCoroutine(attackRoutine);
+
+        attackRoutine = StartCoroutine(SlashRoutine(targetPos, onHit));
+    }
+
+    private IEnumerator SlashRoutine(Vector3 targetPos, System.Action onHit)
+    {
+        // Keep ninja on same y + z
+        targetPos.y = transform.position.y;
+        targetPos.z = transform.position.z;
+
+        // Face direction
+        if (targetPos.x < transform.position.x)
+            transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+        else
+            transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
+
+        // Dash toward word
+        Vector3 startPos = transform.position;
+        float t = 0f;
+
+        while (t < 1f)
+        {
+            t += Time.deltaTime / dashDuration;
+            transform.position = Vector3.Lerp(startPos, targetPos, t);
+            yield return null;
+        }
+
+        // Play swing animation (your existing method)
+        Swing();
+
+        // Wait until the “impact frame”
+        yield return new WaitForSeconds(slashImpactDelay);
+
+        // Actually hit the word
+        onHit?.Invoke();
+
+        attackRoutine = null;
+    }
+
 }
 
