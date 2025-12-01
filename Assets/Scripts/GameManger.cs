@@ -72,22 +72,48 @@ public class GameManager : MonoBehaviour
     public TMP_Text streakPopup;
     void Start()
     {
-        // Load previous level and ball speed values if they exist
-        if (PlayerPrefs.HasKey("levelNum"))
-            levelNum = PlayerPrefs.GetInt("levelNum");
+        const float DefaultBaseFallSpeed = 1.5f;
+        const int DefaultLevelNum = 1;
 
-        if (PlayerPrefs.HasKey("baseFallSpeed"))
-            baseFallSpeed = PlayerPrefs.GetFloat("baseFallSpeed");
+        // Did we explicitly come here from NextLevel()?
+        bool continueFromLevel = PlayerPrefs.GetInt("ContinueFromLevel", 0) == 1;
 
-        if (PlayerPrefs.HasKey("bgIndex"))
-            bgIndex = PlayerPrefs.GetInt("bgIndex");
+        if (continueFromLevel)
+        {
+            // Use the values saved by NextLevel()
+            levelNum = PlayerPrefs.GetInt("levelNum", DefaultLevelNum);
+            baseFallSpeed = PlayerPrefs.GetFloat("baseFallSpeed", DefaultBaseFallSpeed);
+            bgIndex = PlayerPrefs.GetInt("bgIndex", 0);
+
+            // Clear the flag so a totally new run doesn't use this by accident
+            PlayerPrefs.DeleteKey("ContinueFromLevel");
+        }
+        else
+        {
+            // Fresh run: always start from level 1, base speed 1.5, first background
+            levelNum = DefaultLevelNum;
+            baseFallSpeed = DefaultBaseFallSpeed;
+            bgIndex = 0;
+
+            // Clear any stale progress keys
+            PlayerPrefs.DeleteKey("levelNum");
+            PlayerPrefs.DeleteKey("baseFallSpeed");
+            PlayerPrefs.DeleteKey("bgIndex");
+        }
 
         // Apply background
         if (backgrounds.Count > 0 && backgroundRenderer != null)
-            backgroundRenderer.sprite = backgrounds[bgIndex];
+        {
+            int clampedIndex = Mathf.Clamp(bgIndex, 0, backgrounds.Count - 1);
+            backgroundRenderer.sprite = backgrounds[clampedIndex];
+        }
+
+        // Make sure ninja skin matches the current level
+        if (ninja != null)
+            ninja.UpdateSkin(levelNum);
 
         playerUI = FindObjectOfType<UIManager>();
-        if(playerUI != null)
+        if (playerUI != null)
         {
             player1Name = playerUI.player1Name;
             player2Name = playerUI.player2Name;
@@ -161,15 +187,16 @@ public class GameManager : MonoBehaviour
         elapsed = 0f;
         score = 0;
         inputBuffer = "";
-        prevLevel = 0;
-        bgIndex = 0;
+        prevLevel = levelNum;   // not super important now, but fine
         fading = false;
         fadeProgress = 0f;
         levelTimer = 60f;
 
-
         UpdateUI();
+        if (timerText != null)
+            timerText.text = "Time: " + Mathf.CeilToInt(levelTimer);
     }
+
 
     void Update()
     {
@@ -211,7 +238,7 @@ public class GameManager : MonoBehaviour
         }
 
         // --- Background + fail check ---
-        UpdateBackground(); ///////////////// COMMENT OUT
+        // UpdateBackground(); ///////////////// COMMENT OUT
         CheckGameOver();
     }
 
@@ -419,9 +446,14 @@ public class GameManager : MonoBehaviour
 
     public void RetryLevel()
     {
+        // Clear level progress so retry starts this level fresh
+        PlayerPrefs.DeleteKey("ContinueFromLevel");
+        PlayerPrefs.DeleteKey("levelNum");
+        PlayerPrefs.DeleteKey("baseFallSpeed");
+        PlayerPrefs.DeleteKey("bgIndex");
+
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
     }
-
 
     void HandleLevelComplete()
     {
@@ -443,20 +475,31 @@ public class GameManager : MonoBehaviour
         levelNum++;             // Increase the level
         baseFallSpeed += 0.2f;  // Increase difficulty
 
-        // Store these values so they persist after the scene reload
+        // Store these values so they persist ONLY for the immediate next scene load
+        PlayerPrefs.SetInt("ContinueFromLevel", 1);
         PlayerPrefs.SetInt("levelNum", levelNum);
         PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
 
-        // Change background index
-        PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
+        if (backgrounds != null && backgrounds.Count > 0)
+            PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
+
+        PlayerPrefs.Save();
 
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
     }
 
+
     public void BackToMenu()
     {
+        // New game from the menu should always be level 1 / speed 1.5 / first background
+        PlayerPrefs.DeleteKey("ContinueFromLevel");
+        PlayerPrefs.DeleteKey("levelNum");
+        PlayerPrefs.DeleteKey("baseFallSpeed");
+        PlayerPrefs.DeleteKey("bgIndex");
+
         UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
     }
+
 
     public void Quit()
     {
