@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
-    public float baseFallSpeed = 1.5f;
+    public float baseFallSpeed = 1.0f;
     public float spawnInterval = 2.5f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
