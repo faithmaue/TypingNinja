@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
 {
     [Header("Gameplay Settings")]
     public float baseFallSpeed = 1.0f;
-    public float spawnInterval = 2.5f;
+    public float spawnInterval = 3.8f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
     public int miniBossInterval = 50;
@@ -72,7 +72,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text streakPopup;
     void Start()
     {
-        const float DefaultBaseFallSpeed = 1.5f;
+        const float DefaultBaseFallSpeed = 1.2f;
         const int DefaultLevelNum = 1;
 
         // Did we explicitly come here from NextLevel()?
@@ -80,25 +80,25 @@ public class GameManager : MonoBehaviour
 
         if (continueFromLevel)
         {
-            // Use the values saved by NextLevel()
             levelNum = PlayerPrefs.GetInt("levelNum", DefaultLevelNum);
             baseFallSpeed = PlayerPrefs.GetFloat("baseFallSpeed", DefaultBaseFallSpeed);
-            bgIndex = PlayerPrefs.GetInt("bgIndex", 0);
 
-            // Clear the flag so a totally new run doesn't use this by accident
             PlayerPrefs.DeleteKey("ContinueFromLevel");
         }
         else
         {
-            // Fresh run: always start from level 1, base speed 1.5, first background
             levelNum = DefaultLevelNum;
             baseFallSpeed = DefaultBaseFallSpeed;
-            bgIndex = 0;
 
-            // Clear any stale progress keys
             PlayerPrefs.DeleteKey("levelNum");
             PlayerPrefs.DeleteKey("baseFallSpeed");
-            PlayerPrefs.DeleteKey("bgIndex");
+            PlayerPrefs.DeleteKey("bgIndex");   // optional cleanup
+        }
+
+        // Determine background index from level number
+        if (backgrounds != null && backgrounds.Count > 0)
+        {
+            bgIndex = Mathf.Clamp(levelNum - 1, 0, backgrounds.Count - 1);
         }
 
         // Apply background
@@ -107,6 +107,7 @@ public class GameManager : MonoBehaviour
             int clampedIndex = Mathf.Clamp(bgIndex, 0, backgrounds.Count - 1);
             backgroundRenderer.sprite = backgrounds[clampedIndex];
         }
+
 
         // Make sure ninja skin matches the current level
         if (ninja != null)
@@ -494,13 +495,11 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.SetInt("levelNum", levelNum);
         PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
 
-        if (backgrounds != null && backgrounds.Count > 0)
-            PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
-
         PlayerPrefs.Save();
 
         UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
     }
+
 
 
     public void BackToMenu()
