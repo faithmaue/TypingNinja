@@ -2,7 +2,11 @@ using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 using Unity.Burst.CompilerServices;
+=======
+using UnityEngine.SceneManagement;
+>>>>>>> Stashed changes
 =======
 using UnityEngine.SceneManagement;
 >>>>>>> Stashed changes
@@ -46,6 +50,9 @@ public class GameManager : MonoBehaviour
 
 =======
     public TMP_Text timerText;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     [Header("Backgrounds")]
@@ -62,7 +69,13 @@ public class GameManager : MonoBehaviour
     private float spawnTimer;
     private float elapsed;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     private int score;
+=======
+    private int score; // active player's current score (keeps UI/spawn logic simple)
+    private bool isGameOver = false;
+    private float levelTimer = 30f;
+>>>>>>> Stashed changes
 =======
     private int score; // active player's current score (keeps UI/spawn logic simple)
     private bool isGameOver = false;
@@ -94,9 +107,12 @@ public class GameManager : MonoBehaviour
     void Start()
     {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         playerUI = GetComponent<UIManager>();
         if(playerUI != null)
 =======
+=======
+>>>>>>> Stashed changes
         // Persistent settings
         if (PlayerPrefs.HasKey("levelNum"))
             levelNum = PlayerPrefs.GetInt("levelNum");
@@ -125,6 +141,9 @@ public class GameManager : MonoBehaviour
         // Names: prefer UIManager (if persisted), otherwise PlayerPrefs
         playerUI = FindObjectOfType<UIManager>();
         if (playerUI != null)
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         {
             player1Name = playerUI.player1Name;
@@ -136,6 +155,7 @@ public class GameManager : MonoBehaviour
         {
             player1Name = PlayerPrefs.GetString("player1Name", "Player 1");
             player2Name = PlayerPrefs.GetString("player2Name", "Player 2");
+<<<<<<< Updated upstream
         }
         Debug.Log("Player 1 name: " + player1Name);
 
@@ -148,6 +168,19 @@ public class GameManager : MonoBehaviour
             PlayerPrefs.Save();
         }
 
+=======
+        }
+
+        if (PlayerPrefs.HasKey("currentPlayer"))
+            currentPlayer = PlayerPrefs.GetInt("currentPlayer");
+        else
+        {   
+            currentPlayer = 1;
+            PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+            PlayerPrefs.Save();
+        }
+
+>>>>>>> Stashed changes
         if (levelNum == 0 && currentPlayer == 1)
         {
             Debug.Log("resetting point vals");
@@ -241,6 +274,10 @@ public class GameManager : MonoBehaviour
         fading = false;
         fadeProgress = 0f;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+        levelTimer = 30f;
+>>>>>>> Stashed changes
 =======
         levelTimer = 30f;
 >>>>>>> Stashed changes
@@ -266,6 +303,9 @@ public class GameManager : MonoBehaviour
         }
 
         // Spawn logic
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         float dt = Time.deltaTime;
         spawnTimer += dt;
@@ -284,6 +324,10 @@ public class GameManager : MonoBehaviour
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+        // Movement
+>>>>>>> Stashed changes
 =======
         // Movement
 >>>>>>> Stashed changes
@@ -294,7 +338,10 @@ public class GameManager : MonoBehaviour
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         UpdateBackground();
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         CheckGameOver();
@@ -312,6 +359,9 @@ public class GameManager : MonoBehaviour
 =======
                 HandleGameOver();
                 break;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             }
         }
@@ -347,6 +397,7 @@ public class GameManager : MonoBehaviour
     }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     void UpdateBackground()
     {
         if (backgroundRenderer == null || backgrounds.Count == 0)
@@ -372,6 +423,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     public static void OnLevelComplete(int level)
@@ -774,5 +827,8 @@ public class GameManager : MonoBehaviour
     {
         Application.Quit();
     }
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
