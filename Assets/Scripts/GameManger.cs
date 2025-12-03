@@ -8,6 +8,15 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("UI")]
+    public GameObject gameOverPanel; // Panel shown after player death/ level completion
+
+    [Header("Panel Buttons (TMP Texts)")]
+    public TMP_Text gameOverButtonText;        // Game Over panel button text
+    public TMP_Text gameOverTitleText;         // Status of game ("Game Over" / "Player 1 Failed")
+    public TMP_Text playerOneScoreLabel;       // Score shown between levels (Player 1)
+    public TMP_Text playerTwoScoreLabel;       // Score shown between levels (Player 2)
+    
     [Header("Gameplay Settings")]
     public float baseFallSpeed = 1.0f;
     public float spawnInterval = 3.8f;
@@ -18,11 +27,6 @@ public class GameManager : MonoBehaviour
     public int levelPoints = 300;
     public int skinUnlockEveryLevels = 3;
 
-    [Header("UI")]
-    public GameObject gameOverPanel;
-    public GameObject levelCompletePanel;
-
-
     [Header("References")]
     public WordEnemy enemyPrefab;
     public Transform enemyParent;
@@ -31,36 +35,51 @@ public class GameManager : MonoBehaviour
     public TMP_Text inputBufferText;
     public TMP_Text timerText;
 
-
+    [Header("References")]
+    public WordEnemy enemyPrefab; // Prefab relating to spawning enemy words
+    public Transform enemyParent; // Relating to all enemy words in game
+    public NinjaController ninja; // Controls ninja sprite
+    public TMP_Text scoreText; // Score label shown during game play
+    public TMP_Text inputBufferText; // Text shown at bottom of screen (what the player types)
+    public TMP_Text playerNameText; // Current player's name shown during game play
+    public TMP_Text timerText; // Timer label shown during game play
 
     [Header("Backgrounds")]
-    public SpriteRenderer backgroundRenderer;         // ⬅ CHANGED
-    public List<Sprite> backgrounds = new();          // ⬅ CHANGED
+    public SpriteRenderer backgroundRenderer; // Renders all background sprites
+    public List<Sprite> backgrounds = new(); // List of background sprites
 
     [Header("Sounds")]
-    public AudioSource sfxSource;
-    public AudioClip swooshClip;
-    public AudioClip hitClip;
-    public AudioClip bossClip;
-    public int levelNum = 0;
+    public AudioSource sfxSource; // Sound source game object
+    public AudioClip swooshClip; // swoosh/swing sound 
+    public AudioClip hitClip; // hit sound
+    public AudioClip bossClip; // boss word sound
+    public int levelNum = 0; // Curr level (0-8 instead of 1-9)
 
-    private float spawnTimer;
-    private float elapsed;
-    private int score;
-    private bool isGameOver = false;
-    private float levelTimer = 60f;
-    private string inputBuffer = "";
-    private List<WordEnemy> enemies = new();
-    private List<string> normalWords = new();
-    private List<string> miniBossWords = new();
-    private List<string> megaBossWords = new();
-    private int prevLevel = 0;
-    private int bgIndex = 0;
-    private bool fading = false;
-    private float fadeProgress = 0f;
-    private UIManager playerUI;
-    private string player1Name;
-    private string player2Name;
+    private float spawnTimer; // Timer instantiation
+    private float elapsed; // Amount of time elapsed
+    private int score; // active player's current score (keeps UI/spawn logic simple)
+    private bool isGameOver = false; // Tracks if level has been failed/ completed
+    private float levelTimer = 60f; // total time for level
+    private string inputBuffer = ""; // input text from player
+    private List<WordEnemy> enemies = new(); // list of enemies on game screen
+    private List<string> normalWords = new(); // Dictionary 1 words
+    private List<string> miniBossWords = new(); // Dictionary 2 words
+    private List<string> megaBossWords = new(); // Dictionary 3 words
+    private int prevLevel = 0; // previous level???
+    private int bgIndex = 0; // index of current background in list
+    private bool fading = false; // ???
+    private float fadeProgress = 0f; // ???
+    private UIManager playerUI; // keeps track of player names (don't know why it's needed)
+    private string player1Name; // Player 1 name
+    private string player2Name; // Player 2 name
+
+    [Header("Multiplayer")]
+    public bool isMultiplayer = false; // Keeps track of if game is multiplayer
+    private int currentPlayer = 1; // 1 or 2
+    private int player1Score = 0; // First player score
+    private int player2Score = 0; // Second player score
+    private int player1Finished = 0; // Keeps track of if player 1 finished the current level
+    private int player2Finished = 0; // Keeps track of if player 2 finished the current level
 
     private int streak = 0;
     private const int streakGoal = 3;
@@ -69,6 +88,7 @@ public class GameManager : MonoBehaviour
     
     [Header("UI Popups")]
     public TMP_Text streakPopup;
+    
     void Start()
     {
         const float DefaultBaseFallSpeed = 1.2f;
@@ -107,19 +127,79 @@ public class GameManager : MonoBehaviour
             backgroundRenderer.sprite = backgrounds[clampedIndex];
         }
 
+        // Persistent settings
+        if (PlayerPrefs.HasKey("levelNum"))
+            levelNum = PlayerPrefs.GetInt("levelNum");
 
-        // Make sure ninja skin matches the current level
+        if (PlayerPrefs.HasKey("baseFallSpeed"))
+            baseFallSpeed = PlayerPrefs.GetFloat("baseFallSpeed");
+
+        if (PlayerPrefs.HasKey("bgIndex"))
+            bgIndex = PlayerPrefs.GetInt("bgIndex");
+
+        // Apply background
+        if (backgrounds.Count > 0 && backgroundRenderer != null)
+            backgroundRenderer.sprite = backgrounds[Mathf.Clamp(bgIndex, 0, backgrounds.Count - 1)];
+
+        // Multiplayer flags set by UIManager prior to loading gameplay
+        isMultiplayer = PlayerPrefs.GetInt("isMultiplayer", 0) == 1;
+        currentPlayer = PlayerPrefs.GetInt("currentPlayer", 1); // will be 1 first
+
+        // Load saved scores
+        player1Score = PlayerPrefs.GetInt("player1Score", 0);
+        player2Score = PlayerPrefs.GetInt("player2Score", 0);
+
+        // Load saved level completion
+        player1Finished = PlayerPrefs.GetInt("player1Finished", 0);
+        player2Finished = PlayerPrefs.GetInt("player2Finished", 0);
+
+        // Names (Go with entered names, if not use "Player 1" and "Player 2")
         if (ninja != null)
             ninja.UpdateSkin(levelNum);
-
+            
         playerUI = FindObjectOfType<UIManager>();
         if (playerUI != null)
         {
             player1Name = playerUI.player1Name;
             player2Name = playerUI.player2Name;
+            PlayerPrefs.SetString("player1Name", player1Name);
+            PlayerPrefs.SetString("player2Name", player2Name);
+        }
+        else
+        {
+            player1Name = PlayerPrefs.GetString("player1Name", "Player 1");
+            player2Name = PlayerPrefs.GetString("player2Name", "Player 2");
         }
 
-        //playerNameText.text = player1Name;
+        // Retrieves current player
+        if (PlayerPrefs.HasKey("currentPlayer"))
+            currentPlayer = PlayerPrefs.GetInt("currentPlayer");
+        else
+        {   
+            currentPlayer = 1;
+            PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+            PlayerPrefs.Save();
+        }
+
+        // Resets score if game was start over from beginning
+        if (levelNum == 0 && currentPlayer == 1)
+        {
+            Debug.Log("resetting point vals");
+            PlayerPrefs.SetInt("player1Score", 0);
+            PlayerPrefs.SetInt("player2Score", 0);
+        }
+
+        // Modifies player name label to appropriate name
+        if (currentPlayer == 1)
+            playerNameText.text = player1Name;
+        else
+            playerNameText.text = player2Name;
+
+        // Active player's score -> local score used by UI/spawn logic
+        score = (currentPlayer == 1) ? player1Score : player2Score;
+
+        // Set UI to show the active player's name
+        playerNameText.text = (currentPlayer == 1) ? player1Name : player2Name;
 
         LoadDictionaries();
         ResetGame();
@@ -131,6 +211,7 @@ public class GameManager : MonoBehaviour
         TextAsset dict2 = Resources.Load<TextAsset>("dictionary2");
         TextAsset dict3 = Resources.Load<TextAsset>("dictionary3");
 
+        // Loads all words in dictionary 1 (if not use manually entered words)
         if (dict1 != null)
         {
             string[] lines = dict1.text.Split('\n');
@@ -145,7 +226,7 @@ public class GameManager : MonoBehaviour
         {
             normalWords.AddRange(new string[] { "ninja", "shadow", "katana", "dojo", "honor", "stealth" });
         }
-
+        // Loads all words in dictionary 2 (if not use manually entered words)
         if (dict2 != null)
         {
             string[] lines = dict2.text.Split('\n');
@@ -160,7 +241,7 @@ public class GameManager : MonoBehaviour
         {
             miniBossWords.AddRange(new string[] { "lightning", "warriors", "dragons", "phantoms" });
         }
-
+        // Loads all words in dictionary 3 (if not use manually entered words)
         if (dict3 != null)
         {
             string[] lines = dict3.text.Split('\n');
@@ -194,22 +275,27 @@ public class GameManager : MonoBehaviour
 
     void ResetGame()
     {
+        // Remove existing enemies
         foreach (Transform t in enemyParent)
             Destroy(t.gameObject);
 
-        enemies.Clear();
-        spawnTimer = 0f;
-        elapsed = 0f;
-        score = 0;
-        inputBuffer = "";
+        enemies.Clear(); 
+        spawnTimer = 0f; // Reset timer used to spawn words
+        elapsed = 0f; // Reset elapsed time
+
+        // Each player's turn begins fresh — ensure score is the player's saved score
+        score = (currentPlayer == 1) ? player1Score : player2Score;
+
+        inputBuffer = ""; // Reset user input
         prevLevel = levelNum;   // not super important now, but fine
         fading = false;
         fadeProgress = 0f;
-        levelTimer = 20f;
+        levelTimer = 60f;
+        scoreText.text = "Score: " + score;
 
-        UpdateUI();
-        if (timerText != null)
-            timerText.text = "Time: " + Mathf.CeilToInt(levelTimer);
+        if(timerText != null) {
+            timerText.text = "Time: " +  Mathf.CeilToInt(levelTimer);
+        }
     }
 
 
@@ -218,17 +304,18 @@ public class GameManager : MonoBehaviour
         if (isGameOver)
             return;
 
-        // --- Timer logic ---
+        // Update Timer
         levelTimer -= Time.deltaTime;
         timerText.text = "Time: " + Mathf.CeilToInt(levelTimer);
 
+        // If time runs out before player dies, level is completed
         if (levelTimer <= 0f)
         {
             HandleLevelComplete();
             return;
         }
 
-        // --- Spawn logic ---
+        // Spawn words
         float dt = Time.deltaTime;
         spawnTimer += dt;
         elapsed += dt;
@@ -245,7 +332,7 @@ public class GameManager : MonoBehaviour
                 SpawnEnemy();
         }
 
-        // --- Movement of enemies ---
+        // Movement
         foreach (WordEnemy e in enemies)
         {
             if (e != null)
@@ -260,6 +347,7 @@ public class GameManager : MonoBehaviour
 
     void CheckGameOver()
     {
+        // Check if any word on game board has reached the bottom of the screen, if so it is game over
         foreach (WordEnemy e in enemies)
         {
             if (e != null && e.transform.position.y < -5f)
@@ -293,8 +381,6 @@ public class GameManager : MonoBehaviour
         enemies.Add(newEnemy);
     }
 
-
-
     void SpawnMiniBoss()
     {
         string word = miniBossWords[Random.Range(0, miniBossWords.Count)];
@@ -302,8 +388,7 @@ public class GameManager : MonoBehaviour
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
         newEnemy.Init(word, true);
         enemies.Add(newEnemy);
-        if (bossClip != null)
-            sfxSource.PlayOneShot(bossClip);
+        if (bossClip != null) sfxSource.PlayOneShot(bossClip);
     }
 
     void SpawnMegaBoss()
@@ -313,49 +398,14 @@ public class GameManager : MonoBehaviour
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
         newEnemy.Init(word, true);
         enemies.Add(newEnemy);
-        if (bossClip != null)
-            sfxSource.PlayOneShot(bossClip);
+        if (bossClip != null) sfxSource.PlayOneShot(bossClip);
     }
-
-    void UpdateBackground()
-    {
-        // Level starts at 1
-        int level = score / levelPoints + 1;
-
-        // Update ninja skin based on level
-        if (ninja != null)
-            ninja.UpdateSkin(level);
-
-        if (level != prevLevel)
-        {
-            prevLevel = level;
-            // If you still want to trigger skin unlock tracking, you can do:
-            // OnLevelComplete(level);
-        }
-
-        if (backgrounds == null || backgrounds.Count == 0 || backgroundRenderer == null)
-            return;
-
-        int group = (level - 1) % backgrounds.Count;
-
-        if (group != bgIndex && !fading)
-        {
-            bgIndex = group;
-            backgroundRenderer.sprite = backgrounds[bgIndex];
-
-            if (sfxSource != null && swooshClip != null)
-                sfxSource.PlayOneShot(swooshClip);
-        }
-    }
-
 
     public static void OnLevelComplete(int level)
     {
-        if (level == 4)
-            DataManager.UnlockSkin("Black");
-
-        if (level == 7)
-            DataManager.UnlockSkin("Red");
+        // Unlock black skin after 3 levels and red skin after 6
+        if (level == 4) DataManager.UnlockSkin("Black");
+        if (level == 7) DataManager.UnlockSkin("Red");
     }
 
     public void OnKeyPress(string key)
@@ -444,7 +494,6 @@ public class GameManager : MonoBehaviour
         inputBufferText.text = "";
     }
 
-
     void ShowStreakPopup()
     {
     streakPopup.text = "STREAK BONUS!";
@@ -452,9 +501,328 @@ public class GameManager : MonoBehaviour
     streakPopup.gameObject.SetActive(true);
     }
 
-    void UpdateUI()
+    void HandleGameOver() // If player dies/ doesn't complete level
     {
-        scoreText.text = "Score: " + score;
+        // Update player score and who just played
+        Debug.Log(currentPlayer + "failed");
+        PlayerPrefs.SetInt("player1Score", player1Score);
+        PlayerPrefs.SetInt("player2Score", player2Score);
+        PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+        PlayerPrefs.Save();
+
+        if (isGameOver) return;
+        isGameOver = true;
+
+        DisableGameplayUI(); // Disable elements used during game play
+        gameOverPanel.SetActive(true); // Activate panel for in between levels
+
+        // Disable enemy movement
+        foreach (WordEnemy e in enemies)
+            if (e != null) e.enabled = false;
+
+        // MULTIPLAYER LOGIC
+        if (isMultiplayer)
+        {
+            if (currentPlayer == 1) // Player one just failed this level; go to player 2
+            {
+                // Reset score, input text, timer, and enemies
+                score = 0;
+                inputBuffer = "";
+                levelTimer = 30f;
+                ResetEnemies();
+
+                playerNameText.text = player2Name; // Update player name label
+
+                // Update panel text
+                if (gameOverTitleText != null)
+                    gameOverTitleText.text = $"{player1Name} Failed!";
+
+                gameOverButtonText.text = "Player 2 Turn";
+                playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
+                playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
+
+                gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
+                return;
+            }
+            else // If player two just failed this level, current level is complete
+            {
+                // Update panel text
+                playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
+                playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
+
+                gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
+                MultiLevelComplete(); 
+            }
+        }
+        else // Single player
+        {
+            // Update panel text
+            if (gameOverTitleText != null)
+                gameOverTitleText.text = "Level Failed!";
+
+            gameOverButtonText.text = "Retry";
+            gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
+        }
+    }
+
+    void ResetEnemies()
+    {
+        // Clear all enemies in list
+        foreach (Transform t in enemyParent)
+            Destroy(t.gameObject);
+
+        enemies.Clear();
+    }
+
+    void DisableGameplayUI()
+    {
+        // Disable any game element in the game UI
+        CanvasGroup cg = FindObjectOfType<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.interactable = false;
+            cg.blocksRaycasts = false;
+        }
+    }
+
+    public void RetryLevel()
+    {
+        if (isMultiplayer)
+        {
+            if (currentPlayer == 1) // Player 1 just finished their turn
+            {
+                // Switch player
+                currentPlayer = 2;
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
+
+                // Reset the next player's turn state
+                score = player2Score = 0;
+                inputBuffer = "";
+                levelTimer = 30f;
+                ResetEnemies();
+
+                playerNameText.text = player2Name; // Update player name label
+
+                gameOverButtonText.text = $"{player2Name}'s Turn";
+
+                gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
+                SceneManager.LoadScene("GameplayScreen"); // Load same level for player 2
+            }
+            else // If player two just finished their turn
+            {
+                if (player1Finished == 1 && player2Finished == 1) // If both players passed
+                {
+                    if (levelNum == 8) // If on the last level, go back to main menu
+                    {
+                        BackToMenu();
+                    }
+                    else // If not on last level, go to next level (with increased difficulty)
+                    {
+                        NextLevel();
+                    }
+                }
+                else // If one or both players failed the level, go back to main menu
+                {
+                    BackToMenu();
+                }
+            }
+        }
+        else // Single player
+        {
+            if (gameOverTitleText.text.Contains("Failed!")) // If player failed the level, replay same level
+            {
+                SceneManager.LoadScene("GameplayScreen");
+            }
+            else // If player completed the level
+            {
+                if (levelNum == 8) // If at last level, go back to main menu
+                {
+                    BackToMenu();
+                }
+                else // If not at last level, go to next level (with increased difficulty)
+                {
+                    NextLevel();
+                }
+            }
+        }
+    }
+
+    void HandleLevelComplete() // Player successfully completes level
+    {
+        // Save player scores and current player
+        Debug.Log(currentPlayer + " completed");
+        PlayerPrefs.SetInt("player1Score", player1Score);
+        PlayerPrefs.SetInt("player2Score", player2Score);
+        PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+        PlayerPrefs.Save();
+
+        if (isGameOver) return;
+        isGameOver = true;
+
+        DisableGameplayUI(); // Disable elements used to play game
+        gameOverPanel.SetActive(true); // Activate the game over screen
+
+        // MULTIPLAYER LOGIC
+        if (isMultiplayer)
+        {
+            if (currentPlayer == 1) // If player one successfully completed the level, player two takes turn
+            {
+                // Update variable to indicate player one finished the level
+                player1Finished = 1;
+                PlayerPrefs.SetInt("player1Finished", player1Finished);
+                PlayerPrefs.Save();
+
+                // Reset the next player's turn state
+                score = 0;
+                inputBuffer = "";
+                levelTimer = 30f;
+                ResetEnemies();
+
+                playerNameText.text = player2Name; // Update player label to player 2
+
+                // Update panel text
+                if (gameOverTitleText != null)
+                    gameOverTitleText.text = $"{player1Name} Completed!";
+
+                gameOverButtonText.text = "Player 2 Turn";
+                playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
+                playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
+                gameOverPanel.SetActive(true); // Activate the game over screen
+                return;
+            }
+            else // Second player just successfully completed the level
+            {
+                // Update variable to indicate player one finished the level
+                player2Finished = 1;
+                PlayerPrefs.SetInt("player2Finished", player2Finished);
+                PlayerPrefs.Save();
+
+                // Update panel text
+                if (gameOverTitleText != null)
+                    gameOverTitleText.text = $"{player1Name} Completed!";
+
+                playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
+                playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
+
+                gameOverPanel.SetActive(true); // Activate the game over screen
+                
+                MultiLevelComplete();
+            }
+        }
+        else // Single Player
+        {
+            // Update panel text
+            if (gameOverTitleText != null)
+                gameOverTitleText.text = "Level Complete!";
+                
+            gameOverButtonText.text = "Next Level";
+            gameOverPanel.SetActive(true); // Activate the game over screen
+        }
+    }
+
+    public void MultiLevelComplete() // Both players took turn on level
+    {
+        if (player1Finished == 1 && player2Finished == 1) // If both players finished the level
+        {
+            if (levelNum == 8) // If at final level calculate and display winner
+            {
+                gameOverButtonText.text = "Finish";
+                if (player1Score > player2Score)
+                {
+                    gameOverTitleText.text = $"{player1Name} Wins!";
+                }
+                else if (player1Score < player2Score)
+                {
+                    gameOverTitleText.text = $"{player2Name} Wins!";
+                }
+                else
+                {
+                    gameOverTitleText.text = "It's a tie!";
+                }
+            }
+            else // If not at final level players will go to next level
+            {
+                gameOverButtonText.text = "Next Level";
+            }
+        }
+        else if (player1Finished == 1 && player2Finished == 0) // If only player one finished level, end game (player 1 wins)
+        {
+            gameOverButtonText.text = "Finish";
+            gameOverTitleText.text = $"{player1Name} Wins!";
+        }
+        else if (player1Finished == 0 && player2Finished == 1)  // If only player two finished level, end game (player 2 wins)
+        {
+            gameOverButtonText.text = "Finish";
+            gameOverTitleText.text = $"{player2Name} Wins!";
+        }
+        else // If neither player finished the level, calculate and display winner
+        {
+            gameOverButtonText.text = "Finish";
+            if (player1Score > player2Score)
+            {
+                gameOverTitleText.text = $"{player1Name} Wins!";
+            }
+            else if (player1Score < player2Score)
+            {
+                gameOverTitleText.text = $"{player2Name} Wins!";
+            }
+            else
+            {
+                gameOverTitleText.text = "It's a tie!";
+            }
+        }
+
+    }
+
+    public void NextLevel()
+    {
+        if (isMultiplayer && currentPlayer == 2) // If in multiplayer and both player completed the level, reset current player
+        {
+            currentPlayer = 1;
+        }
+
+        // Reset game play values
+        levelNum++;
+        baseFallSpeed += 0.2f;
+        PlayerPrefs.SetInt("levelNum", levelNum);
+        PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
+        PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
+
+        // Reset player specific values
+        PlayerPrefs.SetInt("player1Finished", 0);
+        PlayerPrefs.SetInt("player2Finished", 0);
+        PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+        PlayerPrefs.SetInt("player1Score", player1Score);
+        PlayerPrefs.SetInt("player2Score", player2Score);
+        PlayerPrefs.Save();
+
+        // Load new level scene with updated values
+        SceneManager.LoadScene("GameplayScreen");
+    }
+
+    public void BackToMenu()
+    {
+        // Clear multiplayer state
+        PlayerPrefs.SetInt("isMultiplayer", 0);
+        PlayerPrefs.SetInt("currentPlayer", 1);
+        PlayerPrefs.SetInt("player1Score", 0);
+        PlayerPrefs.SetInt("player2Score", 0);
+        PlayerPrefs.SetInt("player1Finished", 0);
+        PlayerPrefs.SetInt("player2Finished", 0);
+        PlayerPrefs.Save();
+        
+        // Return to menu screen
+        SceneManager.LoadScene("MenuScreen");
+    }
+
+    public void Quit()
+    {
+        Application.Quit();
     }
 
     void HandleGameOver()

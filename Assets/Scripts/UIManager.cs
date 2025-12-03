@@ -33,6 +33,7 @@ public class UIManager : MonoBehaviour
     public void SinglePlayerName()
     {
         numPlayers = 1;
+        PlayerPrefs.SetInt("isMultiplayer", 0);
 
         player1NameField.gameObject.SetActive(true);
         player2NameField.gameObject.SetActive(false);
@@ -44,6 +45,7 @@ public class UIManager : MonoBehaviour
     public void MultiPlayerName()
     {
         numPlayers = 2;
+        PlayerPrefs.SetInt("isMultiplayer", 1);
 
         player1NameField.gameObject.SetActive(true);
         player2NameField.gameObject.SetActive(true);
@@ -64,10 +66,17 @@ public class UIManager : MonoBehaviour
 
         if (playersReady == numPlayers)
         {
+            // store multiplayer flag previously set by SinglePlayerName() / MultiPlayerName()
+            // ensure names and starting player are stored for the gameplay scene
+            PlayerPrefs.SetString("player1Name", player1Name);
+            PlayerPrefs.SetString("player2Name", player2Name);
+            PlayerPrefs.SetInt("currentPlayer", 1); // start with player 1
+
             Debug.Log("game started");
             StartGame();
         }
     }
+
 
     public void StartGame()
     {
