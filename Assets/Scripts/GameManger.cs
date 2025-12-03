@@ -29,7 +29,6 @@ public class GameManager : MonoBehaviour
     public NinjaController ninja;
     public TMP_Text scoreText;
     public TMP_Text inputBufferText;
-    public TMP_Text playerNameText;
     public TMP_Text timerText;
 
 
@@ -120,7 +119,7 @@ public class GameManager : MonoBehaviour
             player2Name = playerUI.player2Name;
         }
 
-        playerNameText.text = player1Name;
+        //playerNameText.text = player1Name;
 
         LoadDictionaries();
         ResetGame();
