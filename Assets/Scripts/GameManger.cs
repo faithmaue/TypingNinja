@@ -177,6 +177,21 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private List<string> GetCurrentDictionary()
+    {
+        // Levels 1–3  → dictionary1 (normalWords)
+        if (levelNum >= 1 && levelNum <= 3)
+            return normalWords;
+
+        // Levels 4–6  → dictionary2 (miniBossWords)
+        if (levelNum >= 4 && levelNum <= 6)
+            return miniBossWords;
+
+        // Levels 7–9+ → dictionary3 (megaBossWords)
+        return megaBossWords;
+    }
+
+
     void ResetGame()
     {
         foreach (Transform t in enemyParent)
@@ -190,7 +205,7 @@ public class GameManager : MonoBehaviour
         prevLevel = levelNum;   // not super important now, but fine
         fading = false;
         fadeProgress = 0f;
-        levelTimer = 60f;
+        levelTimer = 20f;
 
         UpdateUI();
         if (timerText != null)
@@ -258,7 +273,14 @@ public class GameManager : MonoBehaviour
 
     void SpawnEnemy()
     {
-        string word = normalWords[Random.Range(0, normalWords.Count)];
+        List<string> dict = GetCurrentDictionary();
+        if (dict == null || dict.Count == 0)
+        {
+            Debug.LogWarning("Active dictionary is empty – cannot spawn enemy word.");
+            return;
+        }
+
+        string word = dict[Random.Range(0, dict.Count)];
 
         // Choose a random X within view, and a Y a bit above the top
         float x = Random.Range(-7f, 7f);   // you can tweak these later
@@ -270,6 +292,7 @@ public class GameManager : MonoBehaviour
         newEnemy.Init(word, false);
         enemies.Add(newEnemy);
     }
+
 
 
     void SpawnMiniBoss()
@@ -361,39 +384,33 @@ public class GameManager : MonoBehaviour
 
                 if (string.Equals(inputBuffer, e.Word, System.StringComparison.OrdinalIgnoreCase))
                 {
-                    // Score
-                    score += 10 + e.Word.Length * 2;
-
                     Vector3 hitPos = e.transform.position;
 
+                    // Let the ninja move & slash at the word
                     ninja.SlashAt(hitPos, () =>
                     {
                         // Play SFX
                         if (hitClip != null && sfxSource != null)
                             sfxSource.PlayOneShot(hitClip);
 
-                        // Remove enemy
+                        // Remove enemy safely
                         if (e != null)
                         {
                             Destroy(e.gameObject);
-                            enemies.RemoveAt(i);
+                            enemies.Remove(e);   // safer than RemoveAt(i) in a callback
                         }
 
-                        // Score (same as before)
+                        // ✅ Add score ONCE
                         score += 10 + e.Word.Length * 2;
 
-                        // Reset input
+                        // ✅ Reset input ONCE
                         inputBuffer = "";
                         inputBufferText.text = "";
 
                         UpdateUI();
                     });
 
-
-                    // Reset input
-                    inputBuffer = "";
-                    inputBufferText.text = "";
-                    UpdateUI();
+                    // Don’t touch score or input here; the callback will handle it
                     return;
                 }
             }
@@ -427,12 +444,13 @@ public class GameManager : MonoBehaviour
         inputBufferText.text = "";
     }
 
+
     void ShowStreakPopup()
-{
-   streakPopup.text = "STREAK BONUS!";
-   streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
-   streakPopup.gameObject.SetActive(true);
-}
+    {
+    streakPopup.text = "STREAK BONUS!";
+    streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
+    streakPopup.gameObject.SetActive(true);
+    }
 
     void UpdateUI()
     {
@@ -515,7 +533,14 @@ public class GameManager : MonoBehaviour
 
     public void Quit()
     {
+        #if UNITY_EDITOR
+        // Stop play mode in the editor
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        // Quit in a build
         Application.Quit();
+        #endif
     }
+
 
 }
