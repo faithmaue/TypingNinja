@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     public TMP_Text playerTwoScoreLabel;       // Score shown between levels (Player 2)
     
     [Header("Gameplay Settings")]
-    public float baseFallSpeed = 1.0f;
+    public float baseFallSpeed = 1.2f;
     public float spawnInterval = 3.8f;
     public float spawnGrowth = 0.12f;
     public float speedGrowth = 0.06f;
@@ -293,9 +293,11 @@ public class GameManager : MonoBehaviour
         levelTimer = 60f;
         scoreText.text = "Score: " + score;
 
+
         if(timerText != null) {
             timerText.text = "Time: " +  Mathf.CeilToInt(levelTimer);
         }
+
     }
 
 
@@ -401,6 +403,7 @@ public class GameManager : MonoBehaviour
         if (bossClip != null) sfxSource.PlayOneShot(bossClip);
     }
 
+
     public static void OnLevelComplete(int level)
     {
         // Unlock black skin after 3 levels and red skin after 6
@@ -457,7 +460,7 @@ public class GameManager : MonoBehaviour
                         inputBuffer = "";
                         inputBufferText.text = "";
 
-                        UpdateUI();
+                        scoreText.text = "Score: " + score;
                     });
 
                     // Don’t touch score or input here; the callback will handle it
@@ -822,85 +825,6 @@ public class GameManager : MonoBehaviour
 
     public void Quit()
     {
-        Application.Quit();
-    }
-
-    void HandleGameOver()
-    {
-        if (isGameOver) return;
-
-        isGameOver = true;
-        Debug.Log("Game Over!");
-
-        // Stop all movement/spawn logic
-        // (Update() early-return already prevents new spawns)
-        foreach (WordEnemy e in enemies)
-        {
-            if (e != null)
-                e.enabled = false;  // if needed; mostly cosmetic
-        }
-
-        // Show Game Over UI
-        gameOverPanel.SetActive(true);
-    }
-
-    public void RetryLevel()
-    {
-        // Clear level progress so retry starts this level fresh
-        PlayerPrefs.DeleteKey("ContinueFromLevel");
-        PlayerPrefs.DeleteKey("levelNum");
-        PlayerPrefs.DeleteKey("baseFallSpeed");
-        PlayerPrefs.DeleteKey("bgIndex");
-
-        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
-    }
-
-    void HandleLevelComplete()
-    {
-        if (isGameOver) return;
-        isGameOver = true;
-
-        Debug.Log("Level Complete!");
-
-        // Increase difficulty for next level
-        //baseFallSpeed += 0.2f;
-        //levelNum++;
-
-        // Show Level Complete UI
-        levelCompletePanel.SetActive(true);
-    }
-
-    public void NextLevel()
-    {
-        levelNum++;             // Increase the level
-        baseFallSpeed += 0.2f;  // Increase difficulty
-
-        // Store these values so they persist ONLY for the immediate next scene load
-        PlayerPrefs.SetInt("ContinueFromLevel", 1);
-        PlayerPrefs.SetInt("levelNum", levelNum);
-        PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
-
-        PlayerPrefs.Save();
-
-        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
-    }
-
-
-
-    public void BackToMenu()
-    {
-        // New game from the menu should always be level 1 / speed 1.5 / first background
-        PlayerPrefs.DeleteKey("ContinueFromLevel");
-        PlayerPrefs.DeleteKey("levelNum");
-        PlayerPrefs.DeleteKey("baseFallSpeed");
-        PlayerPrefs.DeleteKey("bgIndex");
-
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
-    }
-
-
-    public void Quit()
-    {
         #if UNITY_EDITOR
         // Stop play mode in the editor
         UnityEditor.EditorApplication.isPlaying = false;
@@ -910,5 +834,85 @@ public class GameManager : MonoBehaviour
         #endif
     }
 
+
+    // void HandleGameOver()
+    // {
+    //     if (isGameOver) return;
+
+    //     isGameOver = true;
+    //     Debug.Log("Game Over!");
+
+    //     // Stop all movement/spawn logic
+    //     // (Update() early-return already prevents new spawns)
+    //     foreach (WordEnemy e in enemies)
+    //     {
+    //         if (e != null)
+    //             e.enabled = false;  // if needed; mostly cosmetic
+    //     }
+
+    //     // Show Game Over UI
+    //     gameOverPanel.SetActive(true);
+    // }
+
+    // public void RetryLevel()
+    // {
+    //     // Clear level progress so retry starts this level fresh
+    //     PlayerPrefs.DeleteKey("ContinueFromLevel");
+    //     PlayerPrefs.DeleteKey("levelNum");
+    //     PlayerPrefs.DeleteKey("baseFallSpeed");
+    //     PlayerPrefs.DeleteKey("bgIndex");
+
+    //     UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    // }
+
+    // void HandleLevelComplete()
+    // {
+    //     if (isGameOver) return;
+    //     isGameOver = true;
+
+    //     Debug.Log("Level Complete!");
+
+    //     // Show Level Complete UI
+    //     levelCompletePanel.SetActive(true);
+    // }
+
+    // public void NextLevel()
+    // {
+    //     levelNum++;             // Increase the level
+    //     baseFallSpeed += 0.2f;  // Increase difficulty
+
+    //     // Store these values so they persist ONLY for the immediate next scene load
+    //     PlayerPrefs.SetInt("ContinueFromLevel", 1);
+    //     PlayerPrefs.SetInt("levelNum", levelNum);
+    //     PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
+
+    //     PlayerPrefs.Save();
+
+    //     UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    // }
+
+
+
+    // public void BackToMenu()
+    // {
+    //     // New game from the menu should always be level 1 / speed 1.5 / first background
+    //     PlayerPrefs.DeleteKey("ContinueFromLevel");
+    //     PlayerPrefs.DeleteKey("levelNum");
+    //     PlayerPrefs.DeleteKey("baseFallSpeed");
+    //     PlayerPrefs.DeleteKey("bgIndex");
+
+    //     UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
+    // }
+
+    // public void Quit()
+    // {
+    //     #if UNITY_EDITOR
+    //     // Stop play mode in the editor
+    //     UnityEditor.EditorApplication.isPlaying = false;
+    //     #else
+    //     // Quit in a build
+    //     Application.Quit();
+    //     #endif
+    // }
 
 }
