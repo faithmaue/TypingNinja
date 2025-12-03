@@ -1,20 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
+using Unity.Burst.CompilerServices;
 using UnityEngine.SceneManagement;
+
+
 
 public class GameManager : MonoBehaviour
 {
-    [Header("Gameplay Settings")]
-    public float baseFallSpeed = 1.5f; // Default fall speed
-    public float spawnInterval = 2.5f; // seconds btwn words spawning
-    public float spawnGrowth = 0.12f; // ???
-    public float speedGrowth = 0.06f; // ??? 
-    public int miniBossInterval = 50; // Points to get til mini boss word (OLD VERSION)
-    public int megaBossInterval = 100; // Points to get til mega boss word (OLD VERSION)
-    //public int levelPoints = 300; // What is this used for??
-    public int skinUnlockEveryLevels = 3; // Levels in between each skin
-
     [Header("UI")]
     public GameObject gameOverPanel; // Panel shown after player death/ level completion
 
@@ -23,7 +16,24 @@ public class GameManager : MonoBehaviour
     public TMP_Text gameOverTitleText;         // Status of game ("Game Over" / "Player 1 Failed")
     public TMP_Text playerOneScoreLabel;       // Score shown between levels (Player 1)
     public TMP_Text playerTwoScoreLabel;       // Score shown between levels (Player 2)
+    
+    [Header("Gameplay Settings")]
+    public float baseFallSpeed = 1.0f;
+    public float spawnInterval = 3.8f;
+    public float spawnGrowth = 0.12f;
+    public float speedGrowth = 0.06f;
+    public int miniBossInterval = 50;
+    public int megaBossInterval = 100;
+    public int levelPoints = 300;
+    public int skinUnlockEveryLevels = 3;
 
+    [Header("References")]
+    public WordEnemy enemyPrefab;
+    public Transform enemyParent;
+    public NinjaController ninja;
+    public TMP_Text scoreText;
+    public TMP_Text inputBufferText;
+    public TMP_Text timerText;
 
     [Header("References")]
     public WordEnemy enemyPrefab; // Prefab relating to spawning enemy words
@@ -78,7 +88,7 @@ public class GameManager : MonoBehaviour
     
     [Header("UI Popups")]
     public TMP_Text streakPopup;
-
+    
     void Start()
     {
         const float DefaultBaseFallSpeed = 1.2f;
@@ -144,6 +154,9 @@ public class GameManager : MonoBehaviour
         player2Finished = PlayerPrefs.GetInt("player2Finished", 0);
 
         // Names (Go with entered names, if not use "Player 1" and "Player 2")
+        if (ninja != null)
+            ninja.UpdateSkin(levelNum);
+            
         playerUI = FindObjectOfType<UIManager>();
         if (playerUI != null)
         {
@@ -245,6 +258,21 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private List<string> GetCurrentDictionary()
+    {
+        // Levels 1–3  → dictionary1 (normalWords)
+        if (levelNum >= 1 && levelNum <= 3)
+            return normalWords;
+
+        // Levels 4–6  → dictionary2 (miniBossWords)
+        if (levelNum >= 4 && levelNum <= 6)
+            return miniBossWords;
+
+        // Levels 7–9+ → dictionary3 (megaBossWords)
+        return megaBossWords;
+    }
+
+
     void ResetGame()
     {
         // Remove existing enemies
@@ -269,6 +297,7 @@ public class GameManager : MonoBehaviour
             timerText.text = "Time: " +  Mathf.CeilToInt(levelTimer);
         }
     }
+
 
     void Update()
     {
@@ -310,8 +339,11 @@ public class GameManager : MonoBehaviour
                 e.MoveDown(baseFallSpeed, speedGrowth, score);
         }
 
+        // --- Background + fail check ---
+        // UpdateBackground(); ///////////////// COMMENT OUT
         CheckGameOver();
     }
+
 
     void CheckGameOver()
     {
@@ -321,15 +353,29 @@ public class GameManager : MonoBehaviour
             if (e != null && e.transform.position.y < -5f)
             {
                 HandleGameOver();
-                break;
+                break;  // don’t check further once we know it’s over
             }
         }
     }
 
+
     void SpawnEnemy()
     {
-        string word = normalWords[Random.Range(0, normalWords.Count)];
-        Vector3 pos = new Vector3(Random.Range(-7f, 7f), 5.5f, 0f);
+        List<string> dict = GetCurrentDictionary();
+        if (dict == null || dict.Count == 0)
+        {
+            Debug.LogWarning("Active dictionary is empty – cannot spawn enemy word.");
+            return;
+        }
+
+        string word = dict[Random.Range(0, dict.Count)];
+
+        // Choose a random X within view, and a Y a bit above the top
+        float x = Random.Range(-7f, 7f);   // you can tweak these later
+        float y = 5.5f;                    // slightly above the visible area
+
+        Vector3 pos = new Vector3(x, y, 0f);
+
         WordEnemy newEnemy = Instantiate(enemyPrefab, pos, Quaternion.identity, enemyParent);
         newEnemy.Init(word, false);
         enemies.Add(newEnemy);
@@ -364,83 +410,96 @@ public class GameManager : MonoBehaviour
 
     public void OnKeyPress(string key)
     {
-        if (isGameOver) return;
-        // If backspace pressed, handle appropriately in label
+        // Handle backspace
         if (key == "Backspace")
         {
             if (inputBuffer.Length > 0)
                 inputBuffer = inputBuffer[..^1];
+
             inputBufferText.text = inputBuffer;
             return;
         }
 
-        inputBuffer += key.ToLower(); // Convert all letters to lowercase to make check easier
-        inputBufferText.text = inputBuffer; // Update input text label
+        // Handle Enter (submit the current buffer)
+        if (key == "Enter")
+        {
+            if (string.IsNullOrEmpty(inputBuffer))
+                return;
 
-        // If any enemy starts with the input, highlight the match (and check for complete word)
+            // Look for an exact match with the current buffer
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                WordEnemy e = enemies[i];
+                if (e == null) continue;
+
+                if (string.Equals(inputBuffer, e.Word, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    Vector3 hitPos = e.transform.position;
+
+                    // Let the ninja move & slash at the word
+                    ninja.SlashAt(hitPos, () =>
+                    {
+                        // Play SFX
+                        if (hitClip != null && sfxSource != null)
+                            sfxSource.PlayOneShot(hitClip);
+
+                        // Remove enemy safely
+                        if (e != null)
+                        {
+                            Destroy(e.gameObject);
+                            enemies.Remove(e);   // safer than RemoveAt(i) in a callback
+                        }
+
+                        // ✅ Add score ONCE
+                        score += 10 + e.Word.Length * 2;
+
+                        // ✅ Reset input ONCE
+                        inputBuffer = "";
+                        inputBufferText.text = "";
+
+                        UpdateUI();
+                    });
+
+                    // Don’t touch score or input here; the callback will handle it
+                    return;
+                }
+            }
+
+            // Enter pressed but no word matched → clear input
+            inputBuffer = "";
+            inputBufferText.text = "";
+            return;
+        }
+
+        // Normal character input
+        key = key.ToLowerInvariant();
+        inputBuffer += key;
+        inputBufferText.text = inputBuffer;
+
+        // Highlight prefix matches only
         for (int i = 0; i < enemies.Count; i++)
         {
             WordEnemy e = enemies[i];
             if (e == null) continue;
 
-            if (e.Word.StartsWith(inputBuffer))
+            if (e.Word.StartsWith(inputBuffer, System.StringComparison.OrdinalIgnoreCase))
             {
                 e.HighlightMatch(inputBuffer.Length);
-
-                if (inputBuffer == e.Word)
-                {
-                    // correct full word
-                    int award = 10 + e.Word.Length * 2;
-                    AddScore(award);
-
-                    ninja.PlayAnimation();
-                    if (hitClip != null) sfxSource.PlayOneShot(hitClip);
-
-                    Destroy(e.gameObject);
-                    enemies.RemoveAt(i);
-
-                    inputBuffer = "";
-                    inputBufferText.text = "";
-                    scoreText.text = "Score: " + score;
-                    //UpdateUI();
-                }
-
                 return;
             }
         }
 
-        // No matches -> penalty
-        AddScore(-1);
-
-        // clear input text so player restarts typing
+        // No enemy word starts with this buffer → reset
         inputBuffer = "";
         inputBufferText.text = "";
     }
 
-    public void AddScore(int amount)
+    void ShowStreakPopup()
     {
-        if (currentPlayer == 1) // Updates player 1 score
-        {
-            player1Score += amount;
-            player1Score = Mathf.Max(0, player1Score);
-            score = player1Score;
-            PlayerPrefs.SetInt("player1Score", player1Score);
-        }
-        else // Updates player 2 score
-        {
-            player2Score += amount;
-            player2Score = Mathf.Max(0, player2Score);
-            score = player2Score;
-            PlayerPrefs.SetInt("player2Score", player2Score);
-        }
-        scoreText.text = "Score: " + score;
-        //UpdateUI();
+    streakPopup.text = "STREAK BONUS!";
+    streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
+    streakPopup.gameObject.SetActive(true);
     }
-
-    /*void UpdateUI()
-    {
-        scoreText.text = "Score: " + score;
-    }*/
 
     void HandleGameOver() // If player dies/ doesn't complete level
     {
@@ -765,4 +824,91 @@ public class GameManager : MonoBehaviour
     {
         Application.Quit();
     }
+
+    void HandleGameOver()
+    {
+        if (isGameOver) return;
+
+        isGameOver = true;
+        Debug.Log("Game Over!");
+
+        // Stop all movement/spawn logic
+        // (Update() early-return already prevents new spawns)
+        foreach (WordEnemy e in enemies)
+        {
+            if (e != null)
+                e.enabled = false;  // if needed; mostly cosmetic
+        }
+
+        // Show Game Over UI
+        gameOverPanel.SetActive(true);
+    }
+
+    public void RetryLevel()
+    {
+        // Clear level progress so retry starts this level fresh
+        PlayerPrefs.DeleteKey("ContinueFromLevel");
+        PlayerPrefs.DeleteKey("levelNum");
+        PlayerPrefs.DeleteKey("baseFallSpeed");
+        PlayerPrefs.DeleteKey("bgIndex");
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    }
+
+    void HandleLevelComplete()
+    {
+        if (isGameOver) return;
+        isGameOver = true;
+
+        Debug.Log("Level Complete!");
+
+        // Increase difficulty for next level
+        //baseFallSpeed += 0.2f;
+        //levelNum++;
+
+        // Show Level Complete UI
+        levelCompletePanel.SetActive(true);
+    }
+
+    public void NextLevel()
+    {
+        levelNum++;             // Increase the level
+        baseFallSpeed += 0.2f;  // Increase difficulty
+
+        // Store these values so they persist ONLY for the immediate next scene load
+        PlayerPrefs.SetInt("ContinueFromLevel", 1);
+        PlayerPrefs.SetInt("levelNum", levelNum);
+        PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
+
+        PlayerPrefs.Save();
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
+    }
+
+
+
+    public void BackToMenu()
+    {
+        // New game from the menu should always be level 1 / speed 1.5 / first background
+        PlayerPrefs.DeleteKey("ContinueFromLevel");
+        PlayerPrefs.DeleteKey("levelNum");
+        PlayerPrefs.DeleteKey("baseFallSpeed");
+        PlayerPrefs.DeleteKey("bgIndex");
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
+    }
+
+
+    public void Quit()
+    {
+        #if UNITY_EDITOR
+        // Stop play mode in the editor
+        UnityEditor.EditorApplication.isPlaying = false;
+        #else
+        // Quit in a build
+        Application.Quit();
+        #endif
+    }
+
+
 }

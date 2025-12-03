@@ -34,4 +34,10 @@ public class WordEnemy : MonoBehaviour
         string prefix = word.Substring(0, prefixLength);
         wordText.text = $"<color=#00FF80>{prefix}</color>{word.Substring(prefixLength)}";
     }
+
+    public void Slash()
+    {
+        Destroy(gameObject);
+    }
+
 }

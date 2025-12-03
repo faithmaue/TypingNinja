@@ -6,18 +6,24 @@ public class KeyboardInput : MonoBehaviour
 
     void Update()
     {
-        // Get all characters typed this frame
+        // Handle non-character keys first
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            gameManager.OnKeyPress("Enter");
+            return;
+        }
+
+        // Existing logic for characters typed this frame
         foreach (char c in Input.inputString)
         {
-            // Handle Backspace separately
             if (c == '\b')
             {
+                // Backspace
                 gameManager.OnKeyPress("Backspace");
             }
-            // Ignore Enter/Return
             else if (c == '\n' || c == '\r')
             {
-                // do nothing for now
+                // Enter (handled above), so ignore here
             }
             else
             {
@@ -27,4 +33,5 @@ public class KeyboardInput : MonoBehaviour
         }
     }
 }
+
 
