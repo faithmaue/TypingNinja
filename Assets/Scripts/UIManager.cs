@@ -65,13 +65,7 @@ public class UIManager : MonoBehaviour
     {
         numPlayers = 1;
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 =======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         PlayerPrefs.SetInt("isMultiplayer", 0);
 
         player1NameField.gameObject.SetActive(true);
@@ -86,13 +80,7 @@ public class UIManager : MonoBehaviour
     {
         numPlayers = 2;
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 =======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         PlayerPrefs.SetInt("isMultiplayer", 1);
 
         player1NameField.gameObject.SetActive(true);
