@@ -1,13 +1,23 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Burst.CompilerServices;
 using UnityEngine.SceneManagement;
-
-
+using UnityEngine.UI;
+using Unity.VisualScripting;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
+    [Header("Gameplay Settings")]
+    public float baseFallSpeed = 1.5f; // Default fall speed
+    public float spawnInterval = 2.5f; // seconds btwn words spawning
+    public float spawnGrowth = 0.12f; // ???
+    public float speedGrowth = 0.06f; // ??? 
+    public int miniBossInterval = 50; // Points to get til mini boss word (OLD VERSION)
+    public int megaBossInterval = 100; // Points to get til mega boss word (OLD VERSION)
+    //public int levelPoints = 300; // What is this used for??
+    public int skinUnlockEveryLevels = 3; // Levels in between each skin
+
     [Header("UI")]
     public GameObject gameOverPanel; // Panel shown after player death/ level completion
 
@@ -16,24 +26,6 @@ public class GameManager : MonoBehaviour
     public TMP_Text gameOverTitleText;         // Status of game ("Game Over" / "Player 1 Failed")
     public TMP_Text playerOneScoreLabel;       // Score shown between levels (Player 1)
     public TMP_Text playerTwoScoreLabel;       // Score shown between levels (Player 2)
-    
-    [Header("Gameplay Settings")]
-    public float baseFallSpeed = 1.2f;
-    public float spawnInterval = 3.8f;
-    public float spawnGrowth = 0.12f;
-    public float speedGrowth = 0.06f;
-    public int miniBossInterval = 50;
-    public int megaBossInterval = 100;
-    public int levelPoints = 300;
-    public int skinUnlockEveryLevels = 3;
-
-    [Header("References")]
-    public WordEnemy enemyPrefab;
-    public Transform enemyParent;
-    public NinjaController ninja;
-    public TMP_Text scoreText;
-    public TMP_Text inputBufferText;
-    public TMP_Text timerText;
 
     [Header("References")]
     public WordEnemy enemyPrefab; // Prefab relating to spawning enemy words
@@ -45,8 +37,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text timerText; // Timer label shown during game play
 
     [Header("Backgrounds")]
-    public SpriteRenderer backgroundRenderer; // Renders all background sprites
-    public List<Sprite> backgrounds = new(); // List of background sprites
+    public SpriteRenderer backgroundRenderer;         // ⬅ CHANGED
+    public List<Sprite> backgrounds = new();          // ⬅ CHANGED
 
     [Header("Sounds")]
     public AudioSource sfxSource; // Sound source game object
@@ -54,7 +46,6 @@ public class GameManager : MonoBehaviour
     public AudioClip hitClip; // hit sound
     public AudioClip bossClip; // boss word sound
     public int levelNum = 0; // Curr level (0-8 instead of 1-9)
-
     private float spawnTimer; // Timer instantiation
     private float elapsed; // Amount of time elapsed
     private int score; // active player's current score (keeps UI/spawn logic simple)
@@ -82,15 +73,20 @@ public class GameManager : MonoBehaviour
     private int player2Finished = 0; // Keeps track of if player 2 finished the current level
 
     private int streak = 0;
-    private const int streakGoal = 3;
+    private const int streakGoal = 5;
     private const int streakBonus = 50;
     private const int mistypePenalty = -10;
-    
+    public bool showInputBuffer = true;
+    public GameObject disableBufferTextButton;
+    public GameObject enableBufferTextButton;
+
     [Header("UI Popups")]
     public TMP_Text streakPopup;
-    
+
     void Start()
     {
+        //gameOverPanel.SetActive(false);
+
         const float DefaultBaseFallSpeed = 1.2f;
         const int DefaultLevelNum = 1;
 
@@ -113,6 +109,8 @@ public class GameManager : MonoBehaviour
             PlayerPrefs.DeleteKey("baseFallSpeed");
             PlayerPrefs.DeleteKey("bgIndex");   // optional cleanup
         }
+
+        Debug.Log("level: " + levelNum);
 
         // Determine background index from level number
         if (backgrounds != null && backgrounds.Count > 0)
@@ -141,6 +139,10 @@ public class GameManager : MonoBehaviour
         if (backgrounds.Count > 0 && backgroundRenderer != null)
             backgroundRenderer.sprite = backgrounds[Mathf.Clamp(bgIndex, 0, backgrounds.Count - 1)];
 
+        // Make sure ninja skin matches the current level
+        if (ninja != null)
+            ninja.UpdateSkin(levelNum);
+
         // Multiplayer flags set by UIManager prior to loading gameplay
         isMultiplayer = PlayerPrefs.GetInt("isMultiplayer", 0) == 1;
         currentPlayer = PlayerPrefs.GetInt("currentPlayer", 1); // will be 1 first
@@ -154,9 +156,6 @@ public class GameManager : MonoBehaviour
         player2Finished = PlayerPrefs.GetInt("player2Finished", 0);
 
         // Names (Go with entered names, if not use "Player 1" and "Player 2")
-        if (ninja != null)
-            ninja.UpdateSkin(levelNum);
-            
         playerUI = FindObjectOfType<UIManager>();
         if (playerUI != null)
         {
@@ -184,7 +183,6 @@ public class GameManager : MonoBehaviour
         // Resets score if game was start over from beginning
         if (levelNum == 0 && currentPlayer == 1)
         {
-            Debug.Log("resetting point vals");
             PlayerPrefs.SetInt("player1Score", 0);
             PlayerPrefs.SetInt("player2Score", 0);
         }
@@ -200,6 +198,10 @@ public class GameManager : MonoBehaviour
 
         // Set UI to show the active player's name
         playerNameText.text = (currentPlayer == 1) ? player1Name : player2Name;
+
+        PlayerPrefs.SetInt("ShowInputBuffer", 1);
+        inputBufferText.gameObject.SetActive(true);
+        enableBufferTextButton.SetActive(false);
 
         LoadDictionaries();
         ResetGame();
@@ -272,7 +274,6 @@ public class GameManager : MonoBehaviour
         return megaBossWords;
     }
 
-
     void ResetGame()
     {
         // Remove existing enemies
@@ -282,6 +283,7 @@ public class GameManager : MonoBehaviour
         enemies.Clear(); 
         spawnTimer = 0f; // Reset timer used to spawn words
         elapsed = 0f; // Reset elapsed time
+        streak = 0;
 
         // Each player's turn begins fresh — ensure score is the player's saved score
         score = (currentPlayer == 1) ? player1Score : player2Score;
@@ -291,15 +293,15 @@ public class GameManager : MonoBehaviour
         fading = false;
         fadeProgress = 0f;
         levelTimer = 60f;
-        scoreText.text = "Score: " + score;
+        scoreText.text = "Score: " + score; // UpdateUI()
 
 
         if(timerText != null) {
             timerText.text = "Time: " +  Mathf.CeilToInt(levelTimer);
         }
 
-    }
 
+    }
 
     void Update()
     {
@@ -326,9 +328,9 @@ public class GameManager : MonoBehaviour
         if (spawnTimer >= dynamicInterval)
         {
             spawnTimer = 0;
-            if (score > 0 && score % miniBossInterval == 0 && (levelNum - 1) % 3 == 1)
+            if (levelNum >= 7 && levelNum <= 9)
                 SpawnMiniBoss();
-            else if (score > 0 && score % megaBossInterval == 0 && (levelNum - 1) % 3 == 2)
+            else if (levelNum >= 4 && levelNum <= 6)
                 SpawnMegaBoss();
             else
                 SpawnEnemy();
@@ -340,12 +342,10 @@ public class GameManager : MonoBehaviour
             if (e != null)
                 e.MoveDown(baseFallSpeed, speedGrowth, score);
         }
-
         // --- Background + fail check ---
         // UpdateBackground(); ///////////////// COMMENT OUT
         CheckGameOver();
     }
-
 
     void CheckGameOver()
     {
@@ -355,11 +355,10 @@ public class GameManager : MonoBehaviour
             if (e != null && e.transform.position.y < -5f)
             {
                 HandleGameOver();
-                break;  // don’t check further once we know it’s over
+                break;
             }
         }
     }
-
 
     void SpawnEnemy()
     {
@@ -407,8 +406,10 @@ public class GameManager : MonoBehaviour
     public static void OnLevelComplete(int level)
     {
         // Unlock black skin after 3 levels and red skin after 6
-        if (level == 4) DataManager.UnlockSkin("Black");
-        if (level == 7) DataManager.UnlockSkin("Red");
+        if (level == 4) 
+            DataManager.UnlockSkin("Black");
+        if (level == 7) 
+            DataManager.UnlockSkin("Red");
     }
 
     public void OnKeyPress(string key)
@@ -438,7 +439,6 @@ public class GameManager : MonoBehaviour
                 if (string.Equals(inputBuffer, e.Word, System.StringComparison.OrdinalIgnoreCase))
                 {
                     Vector3 hitPos = e.transform.position;
-
                     // Let the ninja move & slash at the word
                     ninja.SlashAt(hitPos, () =>
                     {
@@ -453,6 +453,14 @@ public class GameManager : MonoBehaviour
                             enemies.Remove(e);   // safer than RemoveAt(i) in a callback
                         }
 
+                        streak++;
+                        if (streak == streakGoal)
+                        {
+                            ShowStreakPopup();
+                            score += streakBonus;
+                            streak = 0;
+                        }
+
                         // ✅ Add score ONCE
                         score += 10 + e.Word.Length * 2;
 
@@ -460,7 +468,7 @@ public class GameManager : MonoBehaviour
                         inputBuffer = "";
                         inputBufferText.text = "";
 
-                        scoreText.text = "Score: " + score;
+                        scoreText.text = "Score: " + score; // UpdateUI()
                     });
 
                     // Don’t touch score or input here; the callback will handle it
@@ -471,11 +479,19 @@ public class GameManager : MonoBehaviour
             // Enter pressed but no word matched → clear input
             inputBuffer = "";
             inputBufferText.text = "";
+            streak = 0;
+            score += mistypePenalty;
             return;
         }
 
         // Normal character input
         key = key.ToLowerInvariant();
+        if (key == "x" || key == "v" || key == "z" || key == "q")
+        {
+            score += 5;
+            scoreText.text = "Score: " + score; // update UI
+        }
+
         inputBuffer += key;
         inputBufferText.text = inputBuffer;
 
@@ -495,19 +511,43 @@ public class GameManager : MonoBehaviour
         // No enemy word starts with this buffer → reset
         inputBuffer = "";
         inputBufferText.text = "";
+        streak = 0;
     }
+
+    public void SetShowInputBuffer()
+    {
+        PlayerPrefs.SetInt("ShowInputBuffer", 1);
+        inputBufferText.gameObject.SetActive(true);
+        enableBufferTextButton.SetActive(false);
+        disableBufferTextButton.SetActive(true);
+    }
+    public void SetDisableInputBuffer()
+    {
+        PlayerPrefs.SetInt("ShowInputBuffer", 0);
+        inputBufferText.gameObject.SetActive(false);
+        disableBufferTextButton.SetActive(false);
+        enableBufferTextButton.SetActive(true);
+    }
+
 
     void ShowStreakPopup()
     {
-    streakPopup.text = "STREAK BONUS!";
-    streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
-    streakPopup.gameObject.SetActive(true);
+        streakPopup.text = "STREAK BONUS!";
+        streakPopup.transform.position = new Vector3(Screen.width / 2, Screen.height / 2, 0);
+        StartCoroutine(StreakPopupRoutine());
+    }
+
+    private IEnumerator StreakPopupRoutine()
+    {
+        streakPopup.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        streakPopup.gameObject.SetActive(false);
     }
 
     void HandleGameOver() // If player dies/ doesn't complete level
     {
         // Update player score and who just played
-        Debug.Log(currentPlayer + "failed");
+        Debug.Log(currentPlayer + " failed");
         PlayerPrefs.SetInt("player1Score", player1Score);
         PlayerPrefs.SetInt("player2Score", player2Score);
         PlayerPrefs.SetInt("currentPlayer", currentPlayer);
@@ -528,19 +568,24 @@ public class GameManager : MonoBehaviour
         {
             if (currentPlayer == 1) // Player one just failed this level; go to player 2
             {
+                player1Score = score;
+                PlayerPrefs.SetInt("player1Score", player1Score);
+                PlayerPrefs.SetInt("player2Score", player2Score);
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
                 // Reset score, input text, timer, and enemies
-                score = 0;
+                /*score = player2Score;
                 inputBuffer = "";
-                levelTimer = 30f;
+                levelTimer = 60f;
                 ResetEnemies();
 
-                playerNameText.text = player2Name; // Update player name label
+                playerNameText.text = player2Name; // Update player name label*/
 
                 // Update panel text
                 if (gameOverTitleText != null)
                     gameOverTitleText.text = $"{player1Name} Failed!";
 
-                gameOverButtonText.text = "Player 2 Turn";
+                gameOverButtonText.text = $"{player2Name}'s Turn";
                 playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
                 playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
 
@@ -549,6 +594,13 @@ public class GameManager : MonoBehaviour
             }
             else // If player two just failed this level, current level is complete
             {
+                player2Score = score;
+                PlayerPrefs.SetInt("player1Score", player1Score);
+                PlayerPrefs.SetInt("player2Score", player2Score);
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
+                if (gameOverTitleText != null)
+                    gameOverTitleText.text = $"{player2Name} Failed!";
                 // Update panel text
                 playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
                 playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
@@ -592,6 +644,7 @@ public class GameManager : MonoBehaviour
 
     public void RetryLevel()
     {
+        Debug.Log("retry level called");
         if (isMultiplayer)
         {
             if (currentPlayer == 1) // Player 1 just finished their turn
@@ -599,19 +652,20 @@ public class GameManager : MonoBehaviour
                 // Switch player
                 currentPlayer = 2;
                 PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.SetInt("ContinueFromLevel", 1);
                 PlayerPrefs.Save();
 
                 // Reset the next player's turn state
-                score = player2Score = 0;
+                score = player2Score;
                 inputBuffer = "";
-                levelTimer = 30f;
+                levelTimer = 60f;
                 ResetEnemies();
 
                 playerNameText.text = player2Name; // Update player name label
 
-                gameOverButtonText.text = $"{player2Name}'s Turn";
+                //gameOverButtonText.text = $"{player2Name}'s Turn";
 
-                gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
+                //gameOverPanel.SetActive(true); // Make panel visible/ able to interact with
                 SceneManager.LoadScene("GameplayScreen"); // Load same level for player 2
             }
             else // If player two just finished their turn
@@ -637,6 +691,12 @@ public class GameManager : MonoBehaviour
         {
             if (gameOverTitleText.text.Contains("Failed!")) // If player failed the level, replay same level
             {
+                // Clear level progress so retry starts this level fresh
+                PlayerPrefs.DeleteKey("ContinueFromLevel");
+                PlayerPrefs.DeleteKey("levelNum");
+                PlayerPrefs.DeleteKey("baseFallSpeed");
+                PlayerPrefs.DeleteKey("bgIndex");
+
                 SceneManager.LoadScene("GameplayScreen");
             }
             else // If player completed the level
@@ -673,24 +733,29 @@ public class GameManager : MonoBehaviour
         {
             if (currentPlayer == 1) // If player one successfully completed the level, player two takes turn
             {
+                player1Score = score;
+                PlayerPrefs.SetInt("player1Score", player1Score);
+                PlayerPrefs.SetInt("player2Score", player2Score);
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
                 // Update variable to indicate player one finished the level
                 player1Finished = 1;
                 PlayerPrefs.SetInt("player1Finished", player1Finished);
                 PlayerPrefs.Save();
 
                 // Reset the next player's turn state
-                score = 0;
+                /*score = player2Score;
                 inputBuffer = "";
-                levelTimer = 30f;
+                levelTimer = 60f;
                 ResetEnemies();
 
-                playerNameText.text = player2Name; // Update player label to player 2
+                playerNameText.text = player2Name; // Update player label to player 2*/
 
                 // Update panel text
                 if (gameOverTitleText != null)
                     gameOverTitleText.text = $"{player1Name} Completed!";
 
-                gameOverButtonText.text = "Player 2 Turn";
+                gameOverButtonText.text = $"{player2Name}'s Turn";
                 playerOneScoreLabel.text = $"{player1Name}: " + player1Score;
                 playerTwoScoreLabel.text = $"{player2Name}: " + player2Score;
                 gameOverPanel.SetActive(true); // Activate the game over screen
@@ -698,6 +763,11 @@ public class GameManager : MonoBehaviour
             }
             else // Second player just successfully completed the level
             {
+                player2Score = score;
+                PlayerPrefs.SetInt("player1Score", player1Score);
+                PlayerPrefs.SetInt("player2Score", player2Score);
+                PlayerPrefs.SetInt("currentPlayer", currentPlayer);
+                PlayerPrefs.Save();
                 // Update variable to indicate player one finished the level
                 player2Finished = 1;
                 PlayerPrefs.SetInt("player2Finished", player2Finished);
@@ -792,9 +862,9 @@ public class GameManager : MonoBehaviour
         // Reset game play values
         levelNum++;
         baseFallSpeed += 0.2f;
+        PlayerPrefs.SetInt("ContinueFromLevel", 1);
         PlayerPrefs.SetInt("levelNum", levelNum);
         PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
-        PlayerPrefs.SetInt("bgIndex", levelNum % backgrounds.Count);
 
         // Reset player specific values
         PlayerPrefs.SetInt("player1Finished", 0);
@@ -810,6 +880,13 @@ public class GameManager : MonoBehaviour
 
     public void BackToMenu()
     {
+        PlayerPrefs.SetInt("ShowInputBuffer", 0);
+        // New game from the menu should always be level 1 / speed 1.5 / first background
+        PlayerPrefs.DeleteKey("ContinueFromLevel");
+        PlayerPrefs.DeleteKey("levelNum");
+        PlayerPrefs.DeleteKey("baseFallSpeed");
+        PlayerPrefs.DeleteKey("bgIndex");
+
         // Clear multiplayer state
         PlayerPrefs.SetInt("isMultiplayer", 0);
         PlayerPrefs.SetInt("currentPlayer", 1);
@@ -825,6 +902,7 @@ public class GameManager : MonoBehaviour
 
     public void Quit()
     {
+        PlayerPrefs.SetInt("ShowInputBuffer", 0);
         #if UNITY_EDITOR
         // Stop play mode in the editor
         UnityEditor.EditorApplication.isPlaying = false;
@@ -833,86 +911,4 @@ public class GameManager : MonoBehaviour
         Application.Quit();
         #endif
     }
-
-
-    // void HandleGameOver()
-    // {
-    //     if (isGameOver) return;
-
-    //     isGameOver = true;
-    //     Debug.Log("Game Over!");
-
-    //     // Stop all movement/spawn logic
-    //     // (Update() early-return already prevents new spawns)
-    //     foreach (WordEnemy e in enemies)
-    //     {
-    //         if (e != null)
-    //             e.enabled = false;  // if needed; mostly cosmetic
-    //     }
-
-    //     // Show Game Over UI
-    //     gameOverPanel.SetActive(true);
-    // }
-
-    // public void RetryLevel()
-    // {
-    //     // Clear level progress so retry starts this level fresh
-    //     PlayerPrefs.DeleteKey("ContinueFromLevel");
-    //     PlayerPrefs.DeleteKey("levelNum");
-    //     PlayerPrefs.DeleteKey("baseFallSpeed");
-    //     PlayerPrefs.DeleteKey("bgIndex");
-
-    //     UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
-    // }
-
-    // void HandleLevelComplete()
-    // {
-    //     if (isGameOver) return;
-    //     isGameOver = true;
-
-    //     Debug.Log("Level Complete!");
-
-    //     // Show Level Complete UI
-    //     levelCompletePanel.SetActive(true);
-    // }
-
-    // public void NextLevel()
-    // {
-    //     levelNum++;             // Increase the level
-    //     baseFallSpeed += 0.2f;  // Increase difficulty
-
-    //     // Store these values so they persist ONLY for the immediate next scene load
-    //     PlayerPrefs.SetInt("ContinueFromLevel", 1);
-    //     PlayerPrefs.SetInt("levelNum", levelNum);
-    //     PlayerPrefs.SetFloat("baseFallSpeed", baseFallSpeed);
-
-    //     PlayerPrefs.Save();
-
-    //     UnityEngine.SceneManagement.SceneManager.LoadScene("GameplayScreen");
-    // }
-
-
-
-    // public void BackToMenu()
-    // {
-    //     // New game from the menu should always be level 1 / speed 1.5 / first background
-    //     PlayerPrefs.DeleteKey("ContinueFromLevel");
-    //     PlayerPrefs.DeleteKey("levelNum");
-    //     PlayerPrefs.DeleteKey("baseFallSpeed");
-    //     PlayerPrefs.DeleteKey("bgIndex");
-
-    //     UnityEngine.SceneManagement.SceneManager.LoadScene("MenuScreen");
-    // }
-
-    // public void Quit()
-    // {
-    //     #if UNITY_EDITOR
-    //     // Stop play mode in the editor
-    //     UnityEditor.EditorApplication.isPlaying = false;
-    //     #else
-    //     // Quit in a build
-    //     Application.Quit();
-    //     #endif
-    // }
-
 }
