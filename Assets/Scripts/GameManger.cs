@@ -295,6 +295,7 @@ public class GameManager : MonoBehaviour
         levelTimer = 60f;
         scoreText.text = "Score: " + score; // UpdateUI()
 
+
         if(timerText != null) {
             timerText.text = "Time: " +  Mathf.CeilToInt(levelTimer);
         }
@@ -400,6 +401,7 @@ public class GameManager : MonoBehaviour
         enemies.Add(newEnemy);
         if (bossClip != null) sfxSource.PlayOneShot(bossClip);
     }
+
 
     public static void OnLevelComplete(int level)
     {
